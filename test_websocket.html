@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartCanopy WebSocket Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 20px;
+            max-width: 1000px;
+        }
+        h1 {
+            color: #2d5016;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        #message {
+            flex: 1;
+            padding: 12px;
+            font-size: 14px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        #sendBtn {
+            background: #2d5016;
+            color: white;
+        }
+        #sendBtn:hover {
+            background: #1f3810;
+        }
+        #clearBtn {
+            background: #e0e0e0;
+            color: #333;
+        }
+        #clearBtn:hover {
+            background: #d0d0d0;
+        }
+        #output {
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            padding: 20px;
+            min-height: 400px;
+            white-space: pre-wrap;
+            background: #f9f9f9;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .examples {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 4px;
+        }
+        .examples h3 {
+            margin-top: 0;
+            color: #2d5016;
+        }
+        .examples ul {
+            margin: 10px 0;
+        }
+        .examples li {
+            margin: 5px 0;
+            cursor: pointer;
+            color: #1976d2;
+        }
+        .examples li:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌳 SmartCanopy WebSocket Test</h1>
+
+    <div class="status disconnected" id="status">⚠️ Not Connected</div>
+
+    <div class="examples">
+        <h3>💡 Example Questions (click to use):</h3>
+        <ul>
+            <li onclick="setMessage(this.textContent)">Calculate environmental benefits of 1 American Sycamore for 20 years</li>
+            <li onclick="setMessage(this.textContent)">How much does it cost to plant a 6-foot tree in San Francisco?</li>
+            <li onclick="setMessage(this.textContent)">What's the best shade tree for my yard?</li>
+            <li onclick="setMessage(this.textContent)">Tell me about tree planting safety and clearances</li>
+        </ul>
+    </div>
+
+    <div class="controls">
+        <input type="text" id="message" placeholder="Type your message..."
+               value="Calculate environmental benefits of 1 American Sycamore for 20 years">
+        <button id="sendBtn" onclick="sendMessage()">Send</button>
+        <button id="clearBtn" onclick="clearOutput()">Clear</button>
+    </div>
+
+    <h3>Agent Response:</h3>
+    <div id="output"></div>
+
+    <script>
+        const conversationId = 'test-' + Date.now();
+        let ws;
+        const output = document.getElementById('output');
+        const status = document.getElementById('status');
+
+        function connect() {
+            ws = new WebSocket(`ws://localhost:8000/api/agent/ws/${conversationId}`);
+
+            ws.onopen = () => {
+                output.innerHTML += '🔌 Connected to SmartCanopy AI!\n';
+                output.innerHTML += `Conversation ID: ${conversationId}\n\n`;
+                status.textContent = '✅ Connected';
+                status.className = 'status connected';
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'chunk') {
+                    // Streaming text
+                    output.innerHTML += data.text;
+                    output.scrollTop = output.scrollHeight;
+                }
+                else if (data.type === 'tool_use') {
+                    output.innerHTML += `\n\n[🔧 Using tool: ${data.tool_name}]\n`;
+                    output.scrollTop = output.scrollHeight;
+                }
+                else if (data.type === 'tool_result') {
+                    output.innerHTML += `[✅ ${data.tool_name} complete]\n\n`;
+                    output.scrollTop = output.scrollHeight;
+                }
+                else if (data.type === 'complete') {
+                    output.innerHTML += '\n\n✅ Response complete!\n';
+                    output.innerHTML += `Tools used: ${data.tool_calls.length}\n`;
+                    data.tool_calls.forEach(t => {
+                        output.innerHTML += `  • ${t.tool}\n`;
+                    });
+                    output.innerHTML += '\n' + '='.repeat(80) + '\n\n';
+                    output.scrollTop = output.scrollHeight;
+                }
+                else if (data.type === 'error') {
+                    output.innerHTML += `\n❌ Error: ${data.message}\n`;
+                    output.scrollTop = output.scrollHeight;
+                }
+            };
+
+            ws.onerror = (error) => {
+                output.innerHTML += `\n❌ WebSocket Error\n`;
+                output.innerHTML += `Make sure the API server is running:\n`;
+                output.innerHTML += `  python3 scripts/run_api.py\n\n`;
+                status.textContent = '❌ Error';
+                status.className = 'status disconnected';
+            };
+
+            ws.onclose = () => {
+                output.innerHTML += '\n⚠️ Disconnected\n\n';
+                status.textContent = '⚠️ Disconnected';
+                status.className = 'status disconnected';
+            };
+        }
+
+        function sendMessage() {
+            const message = document.getElementById('message').value;
+
+            if (!message.trim()) {
+                alert('Please enter a message');
+                return;
+            }
+
+            if (ws.readyState !== WebSocket.OPEN) {
+                alert('Not connected. Reconnecting...');
+                connect();
+                setTimeout(() => sendMessage(), 1000);
+                return;
+            }
+
+            output.innerHTML += `👤 You: ${message}\n\n🤖 SmartCanopy:\n`;
+            ws.send(JSON.stringify({ message: message }));
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            output.innerHTML = '';
+        }
+
+        function setMessage(text) {
+            document.getElementById('message').value = text;
+        }
+
+        // Allow Enter key to send
+        document.getElementById('message').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Connect on load
+        connect();
+    </script>
+</body>
+</html>

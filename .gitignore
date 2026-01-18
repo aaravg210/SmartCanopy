@@ -1,0 +1,62 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Cache directories
+cache/
+.cache/
+
+# Test data and analysis outputs (large files)
+test_data/
+analysis_data/
+uploads/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# Model weights (downloaded automatically)
+*.pt
+*.pth
+*.onnx
+
+# Credentials
+credentials.json
+*.pem
+*.key

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose exec:*)",
+      "Bash(source venv/bin/activate)",
+      "Bash(python scripts/seed_plants.py:*)",
+      "Bash(python3:*)",
+      "Bash(source:*)",
+      "Bash(pytest:*)"
+    ]
+  }
+}
