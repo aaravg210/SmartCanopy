@@ -1,16 +1,30 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import { useMapStore } from '@/stores/mapStore'
 import SiteDetailPanel from './SiteDetailPanel'
 import ChatPanel from '../chat/ChatPanel'
 
-export default function SidePanel() {
+interface SidePanelProps {
+  askAITrigger?: number
+}
+
+export default function SidePanel({ askAITrigger = 0 }: SidePanelProps) {
   const { selectedSite, currentAnalysis, selectSite } = useAnalysisStore()
   const { currentTier } = useMapStore()
   const [chatOpen, setChatOpen] = useState(false)
   const [chatInitialMessage, setChatInitialMessage] = useState<string | undefined>()
+
+  // Open chat when askAITrigger changes (triggered by "Ask SmartCanopy AI" button)
+  useEffect(() => {
+    if (askAITrigger > 0 && selectedSite) {
+      // Create a contextual initial message based on the selected site
+      const initialMsg = `I'm looking at planting site #${selectedSite.site_id.slice(0, 8)} at ${currentAnalysis?.address || 'this location'}. It has ${selectedSite.ndvi_category.replace(/_/g, ' ')} vegetation, ${selectedSite.slope_category} terrain, and about ${selectedSite.area_sq_ft.toLocaleString()} square feet of space. What tree species would you recommend for this site?`
+      setChatInitialMessage(initialMsg)
+      setChatOpen(true)
+    }
+  }, [askAITrigger, selectedSite, currentAnalysis])
 
   const handleOpenChat = (initialMessage?: string) => {
     setChatInitialMessage(initialMessage)

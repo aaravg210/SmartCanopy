@@ -8,12 +8,14 @@ import { SITE_COLORS } from '@/lib/mapbox/config'
 import { getPriorityNumber } from '@/types'
 
 interface SitePopupProps {
+  siteId: string
   suitabilityScore: number
   ndviCategory: string
   slopeCategory: string
   areaSqFt: number
   hasNearbyRoads: boolean
   hasNearbyBuildings: boolean
+  isClickPopup?: boolean
 }
 
 function createSitePopupHTML(props: SitePopupProps): string {
@@ -78,24 +80,55 @@ function createSitePopupHTML(props: SitePopupProps): string {
         </div>
       ` : ''}
 
-      <div style="
-        font-size: 11px;
-        color: #6b7280;
-        padding-top: 8px;
-        border-top: 1px solid #e5e7eb;
-      ">
-        Click for details & recommendations
-      </div>
+      ${props.isClickPopup ? `
+        <button
+          class="ask-smartcanopy-ai-btn"
+          data-site-id="${props.siteId}"
+          style="
+            width: 100%;
+            padding: 10px 12px;
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 8px;
+            transition: transform 0.1s, box-shadow 0.1s;
+          "
+          onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(34,197,94,0.4)';"
+          onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';"
+        >
+          <span style="font-size: 16px;">🌳</span>
+          Ask SmartCanopy AI
+        </button>
+      ` : `
+        <div style="
+          font-size: 11px;
+          color: #6b7280;
+          padding-top: 8px;
+          border-top: 1px solid #e5e7eb;
+        ">
+          Click for details & recommendations
+        </div>
+      `}
     </div>
   `
 }
 
 interface StreetLayerProps {
   map: mapboxgl.Map
+  onAskAI?: (siteId: string) => void
 }
 
-export default function StreetLayer({ map }: StreetLayerProps) {
-  const popup = useRef<mapboxgl.Popup | null>(null)
+export default function StreetLayer({ map, onAskAI }: StreetLayerProps) {
+  const hoverPopup = useRef<mapboxgl.Popup | null>(null)
+  const clickPopup = useRef<mapboxgl.Popup | null>(null)
   const { currentTier } = useMapStore()
   const { currentAnalysis, selectSite } = useAnalysisStore()
 
@@ -247,102 +280,150 @@ export default function StreetLayer({ map }: StreetLayerProps) {
           'circle-opacity': 0.8,
         },
       })
+    }
 
-      // Hover handler for existing trees
-      map.on('mouseenter', TREES_LAYER_ID, (e) => {
-        map.getCanvas().style.cursor = 'pointer'
+    // Define event handlers (these need to be registered fresh each time)
+    const handleTreesMouseEnter = (e: mapboxgl.MapLayerMouseEvent) => {
+      map.getCanvas().style.cursor = 'pointer'
 
-        if (e.features && e.features[0]) {
-          const props = e.features[0].properties
-          const coordinates = (e.features[0].geometry as GeoJSON.Point).coordinates.slice() as [number, number]
+      if (e.features && e.features[0]) {
+        const props = e.features[0].properties
+        const coordinates = (e.features[0].geometry as GeoJSON.Point).coordinates.slice() as [number, number]
 
-          if (popup.current) {
-            popup.current.remove()
-          }
+        if (hoverPopup.current) {
+          hoverPopup.current.remove()
+        }
 
-          const confidence = props?.confidence ? (props.confidence * 100).toFixed(0) : 'N/A'
-          popup.current = new mapboxgl.Popup({
-            closeButton: false,
-            closeOnClick: false,
-            offset: 10,
-          })
-            .setLngLat(coordinates)
-            .setHTML(`
-              <div style="padding: 8px; min-width: 120px;">
-                <div style="font-weight: 600; font-size: 13px; color: #22c55e; margin-bottom: 4px;">
-                  🌳 Existing Tree
-                </div>
-                <div style="font-size: 12px; color: #6b7280;">
-                  Confidence: ${confidence}%
-                </div>
+        const confidence = props?.confidence ? (props.confidence * 100).toFixed(0) : 'N/A'
+        hoverPopup.current = new mapboxgl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          offset: 10,
+        })
+          .setLngLat(coordinates)
+          .setHTML(`
+            <div style="padding: 8px; min-width: 120px;">
+              <div style="font-weight: 600; font-size: 13px; color: #22c55e; margin-bottom: 4px;">
+                🌳 Existing Tree
               </div>
-            `)
-            .addTo(map)
-        }
-      })
+              <div style="font-size: 12px; color: #6b7280;">
+                Confidence: ${confidence}%
+              </div>
+            </div>
+          `)
+          .addTo(map)
+      }
+    }
 
-      map.on('mouseleave', TREES_LAYER_ID, () => {
-        map.getCanvas().style.cursor = ''
-        if (popup.current) {
-          popup.current.remove()
-          popup.current = null
-        }
-      })
+    const handleTreesMouseLeave = () => {
+      map.getCanvas().style.cursor = ''
+      if (hoverPopup.current) {
+        hoverPopup.current.remove()
+        hoverPopup.current = null
+      }
+    }
 
-      // Click handler
-      map.on('click', SITES_LAYER_ID, (e) => {
-        if (e.features && e.features[0]) {
-          const props = e.features[0].properties
-          const site = currentAnalysis?.planting_sites.find(
-            (s) => s.site_id === props?.site_id
-          )
-          if (site) {
-            selectSite(site)
-          }
-        }
-      })
+    // Click handler - show popup with "Ask SmartCanopy AI" button
+    const handleSitesClick = (e: mapboxgl.MapLayerMouseEvent) => {
+      if (e.features && e.features[0]) {
+        const props = e.features[0].properties
+        const coordinates = (e.features[0].geometry as GeoJSON.Point).coordinates.slice() as [number, number]
+        const site = currentAnalysis?.planting_sites.find(
+          (s) => s.site_id === props?.site_id
+        )
 
-      // Hover handlers
-      map.on('mouseenter', SITES_LAYER_ID, (e) => {
-        map.getCanvas().style.cursor = 'pointer'
-
-        if (e.features && e.features[0]) {
-          const props = e.features[0].properties
-          const coordinates = (e.features[0].geometry as GeoJSON.Point).coordinates.slice() as [number, number]
-
-          // Remove existing popup
-          if (popup.current) {
-            popup.current.remove()
+        if (site) {
+          // Remove hover popup
+          if (hoverPopup.current) {
+            hoverPopup.current.remove()
+            hoverPopup.current = null
           }
 
-          popup.current = new mapboxgl.Popup({
-            closeButton: false,
+          // Remove existing click popup
+          if (clickPopup.current) {
+            clickPopup.current.remove()
+          }
+
+          // Select the site for context
+          selectSite(site)
+
+          // Create click popup with "Ask SmartCanopy AI" button
+          clickPopup.current = new mapboxgl.Popup({
+            closeButton: true,
             closeOnClick: false,
             offset: 15,
+            maxWidth: '280px',
           })
             .setLngLat(coordinates)
             .setHTML(
               createSitePopupHTML({
+                siteId: props?.site_id || '',
                 suitabilityScore: props?.suitability_score || 0,
                 ndviCategory: props?.ndvi_category || '',
                 slopeCategory: props?.slope_category || '',
                 areaSqFt: props?.area_sq_ft || 0,
                 hasNearbyRoads: props?.has_nearby_roads || false,
                 hasNearbyBuildings: props?.has_nearby_buildings || false,
+                isClickPopup: true,
               })
             )
             .addTo(map)
         }
-      })
-
-      map.on('mouseleave', SITES_LAYER_ID, () => {
-        map.getCanvas().style.cursor = ''
-        if (popup.current) {
-          popup.current.remove()
-          popup.current = null
-        }
-      })
+      }
     }
+
+    // Hover handler for planting sites
+    const handleSitesMouseEnter = (e: mapboxgl.MapLayerMouseEvent) => {
+      map.getCanvas().style.cursor = 'pointer'
+
+      // Don't show hover popup if click popup is open
+      if (clickPopup.current) return
+
+      if (e.features && e.features[0]) {
+        const props = e.features[0].properties
+        const coordinates = (e.features[0].geometry as GeoJSON.Point).coordinates.slice() as [number, number]
+
+        // Remove existing hover popup
+        if (hoverPopup.current) {
+          hoverPopup.current.remove()
+        }
+
+        hoverPopup.current = new mapboxgl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          offset: 15,
+        })
+          .setLngLat(coordinates)
+          .setHTML(
+            createSitePopupHTML({
+              siteId: props?.site_id || '',
+              suitabilityScore: props?.suitability_score || 0,
+              ndviCategory: props?.ndvi_category || '',
+              slopeCategory: props?.slope_category || '',
+              areaSqFt: props?.area_sq_ft || 0,
+              hasNearbyRoads: props?.has_nearby_roads || false,
+              hasNearbyBuildings: props?.has_nearby_buildings || false,
+              isClickPopup: false,
+            })
+          )
+          .addTo(map)
+      }
+    }
+
+    const handleSitesMouseLeave = () => {
+      map.getCanvas().style.cursor = ''
+      if (hoverPopup.current) {
+        hoverPopup.current.remove()
+        hoverPopup.current = null
+      }
+    }
+
+    // Register event handlers
+    map.on('mouseenter', TREES_LAYER_ID, handleTreesMouseEnter)
+    map.on('mouseleave', TREES_LAYER_ID, handleTreesMouseLeave)
+    map.on('click', SITES_LAYER_ID, handleSitesClick)
+    map.on('mouseenter', SITES_LAYER_ID, handleSitesMouseEnter)
+    map.on('mouseleave', SITES_LAYER_ID, handleSitesMouseLeave)
 
     // Update visibility based on tier and data availability
     const hasSitesData = currentAnalysis?.planting_sites && currentAnalysis.planting_sites.length > 0
@@ -363,11 +444,44 @@ export default function StreetLayer({ map }: StreetLayerProps) {
     }
 
     return () => {
-      if (popup.current) {
-        popup.current.remove()
+      // Remove event handlers
+      map.off('mouseenter', TREES_LAYER_ID, handleTreesMouseEnter)
+      map.off('mouseleave', TREES_LAYER_ID, handleTreesMouseLeave)
+      map.off('click', SITES_LAYER_ID, handleSitesClick)
+      map.off('mouseenter', SITES_LAYER_ID, handleSitesMouseEnter)
+      map.off('mouseleave', SITES_LAYER_ID, handleSitesMouseLeave)
+
+      if (hoverPopup.current) {
+        hoverPopup.current.remove()
+      }
+      if (clickPopup.current) {
+        clickPopup.current.remove()
       }
     }
   }, [map, currentAnalysis, currentTier, selectSite])
+
+  // Event listener for "Ask SmartCanopy AI" button clicks
+  useEffect(() => {
+    const handleAskAIClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (target.classList.contains('ask-smartcanopy-ai-btn')) {
+        const siteId = target.dataset.siteId
+        if (siteId && onAskAI) {
+          // Close the popup
+          if (clickPopup.current) {
+            clickPopup.current.remove()
+            clickPopup.current = null
+          }
+          onAskAI(siteId)
+        }
+      }
+    }
+
+    document.addEventListener('click', handleAskAIClick)
+    return () => {
+      document.removeEventListener('click', handleAskAIClick)
+    }
+  }, [onAskAI])
 
   return null
 }

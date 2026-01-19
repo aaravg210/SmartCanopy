@@ -149,11 +149,16 @@ class SiteDataLoader:
             else:
                 location_pixels = site.location_pixels
 
-        # Estimate area in square feet (approximate from pixels)
-        # Assuming ~1m resolution imagery, 1 pixel ≈ 1 m² ≈ 10.76 sq ft
+        # Calculate area in square feet from pixels
+        # Image is 512x512 pixels covering 200m x 200m (buffer_m=100 default)
+        # 1 pixel = 0.39m x 0.39m = 0.152 m² = 1.64 sq ft
         area_sq_ft = None
         if site.area_pixels:
-            area_sq_ft = int(site.area_pixels * 10.76)
+            default_buffer_m = 100
+            image_size_px = 512
+            meters_per_pixel = (2 * default_buffer_m) / image_size_px
+            sq_feet_per_pixel = (meters_per_pixel ** 2) * 10.76
+            area_sq_ft = int(site.area_pixels * sq_feet_per_pixel)
 
         # Categorize NDVI
         ndvi_category = self._categorize_ndvi(site.avg_ndvi)

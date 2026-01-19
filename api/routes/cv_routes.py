@@ -157,8 +157,15 @@ async def analyze_address(request: AnalysisRequest):
             else:
                 slope_category = 'steep'
 
-            # Estimate area in square feet (1 pixel ≈ 1m² ≈ 10.76 sq ft)
-            area_sq_ft = int(site_data['area_pixels'] * 10.76)
+            # Calculate area in square feet based on image resolution
+            # Image is 512x512 pixels covering (2 * buffer_m) x (2 * buffer_m) meters
+            # For buffer_m=100: 512px covers 200m, so 1 pixel = 0.39m x 0.39m = 0.152 m²
+            image_size_px = 512
+            meters_per_side = 2 * request.buffer_m
+            meters_per_pixel = meters_per_side / image_size_px
+            sq_meters_per_pixel = meters_per_pixel ** 2
+            sq_feet_per_pixel = sq_meters_per_pixel * 10.76  # 1 m² = 10.76 sq ft
+            area_sq_ft = int(site_data['area_pixels'] * sq_feet_per_pixel)
 
             # Check for nearby infrastructure from OSM data
             osm_data = result.get('osm_data', {})
@@ -279,6 +286,13 @@ async def get_analysis(analysis_id: str):
                 )
 
             # Format response
+            # Calculate area using default buffer_m=100 assumption
+            # (512px image covering 200m x 200m = 0.152 m²/px = 1.64 sq ft/px)
+            default_buffer_m = 100
+            image_size_px = 512
+            meters_per_pixel = (2 * default_buffer_m) / image_size_px
+            sq_feet_per_pixel = (meters_per_pixel ** 2) * 10.76
+
             site_responses = []
             for site in sites:
                 site_responses.append({
@@ -288,7 +302,7 @@ async def get_analysis(analysis_id: str):
                     'longitude': site.longitude,
                     'avg_ndvi': round(site.avg_ndvi, 3),
                     'avg_slope': round(site.avg_slope, 2),
-                    'area_sq_ft': int(site.area_pixels * 10.76),
+                    'area_sq_ft': int(site.area_pixels * sq_feet_per_pixel),
                     'suitability_score': round(site.suitability_score, 3)
                 })
 
