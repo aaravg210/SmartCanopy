@@ -3,12 +3,45 @@ Planting Site Detection Algorithm
 Combines DeepForest, NDVI, and slope to identify optimal tree planting locations
 """
 
+import math
 from test_deepforest import DeepForestDetector
 from download_imagery import ImageryDownloader
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 from osm_filter import OSMFilter
+
+
+def pixel_to_latlon(px: float, py: float, center_lat: float, center_lon: float,
+                    buffer_m: int, img_width: int = 512, img_height: int = 512) -> tuple:
+    """
+    Convert pixel coordinates to latitude/longitude.
+
+    The imagery is a square buffer around the center point.
+    Pixel (0,0) is top-left, corresponding to (max_lat, min_lon).
+    """
+    # Meters per degree (approximate)
+    meters_per_deg_lat = 111320
+    meters_per_deg_lon = 111320 * math.cos(math.radians(center_lat))
+
+    # Calculate geographic bounds
+    lat_delta = buffer_m / meters_per_deg_lat
+    lon_delta = buffer_m / meters_per_deg_lon
+
+    min_lat = center_lat - lat_delta
+    max_lat = center_lat + lat_delta
+    min_lon = center_lon - lon_delta
+    max_lon = center_lon + lon_delta
+
+    # Convert pixel to normalized position (0-1)
+    x_norm = px / img_width
+    y_norm = py / img_height
+
+    # Map to lat/lon (y is inverted in image coordinates)
+    lon = min_lon + x_norm * (max_lon - min_lon)
+    lat = max_lat - y_norm * (max_lat - min_lat)
+
+    return (lat, lon)
 
 
 class PlantingSiteDetector:
@@ -94,13 +127,53 @@ class PlantingSiteDetector:
         # Generate report
         self.generate_report(address, tree_predictions, filtered_sites)
 
+        # Get image dimensions and center coordinates for coordinate conversion
+        img = Image.open(result['rgb_path'])
+        img_width, img_height = img.size
+        center_lat = result['coordinates'][0]
+        center_lon = result['coordinates'][1]
+
+        # Extract existing tree locations with lat/lon
+        existing_trees = []
+        if tree_predictions is not None and len(tree_predictions) > 0:
+            for _, tree in tree_predictions.iterrows():
+                # Calculate center of bounding box
+                center_x = (tree['xmin'] + tree['xmax']) / 2
+                center_y = (tree['ymin'] + tree['ymax']) / 2
+
+                lat, lon = pixel_to_latlon(
+                    center_x, center_y,
+                    center_lat, center_lon,
+                    buffer_m, img_width, img_height
+                )
+
+                existing_trees.append({
+                    'lat': lat,
+                    'lon': lon,
+                    'confidence': float(tree['score']),
+                    'bbox_width': int(tree['xmax'] - tree['xmin']),
+                    'bbox_height': int(tree['ymax'] - tree['ymin'])
+                })
+
+        # Convert planting site pixel coords to lat/lon
+        for site in filtered_sites:
+            px, py = site['location']
+            lat, lon = pixel_to_latlon(
+                px, py,
+                center_lat, center_lon,
+                buffer_m, img_width, img_height
+            )
+            site['location_lat'] = lat
+            site['location_lon'] = lon
+
         return {
-        'address': address,
-        'existing_trees': len(tree_predictions) if tree_predictions is not None else 0,
-        'planting_sites': filtered_sites,  # Filtered!
-        'imagery': result,
-        'osm_data': osm_data,
-        'exclusion_mask': exclusion_mask
+            'address': address,
+            'existing_trees': existing_trees,  # List with lat/lon instead of just count
+            'existing_trees_count': len(existing_trees),  # Keep count for backward compat
+            'planting_sites': filtered_sites,  # Now includes location_lat/lon
+            'imagery': result,
+            'osm_data': osm_data,
+            'exclusion_mask': exclusion_mask
         }
 
 

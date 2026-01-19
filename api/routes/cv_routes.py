@@ -47,6 +47,15 @@ class PlantingSiteResponse(BaseModel):
     has_nearby_buildings: bool
 
 
+class ExistingTreeResponse(BaseModel):
+    """Existing tree detection from DeepForest"""
+    lat: float
+    lon: float
+    confidence: float
+    bbox_width: int
+    bbox_height: int
+
+
 class AnalysisResponse(BaseModel):
     """CV analysis response"""
     analysis_id: str
@@ -54,6 +63,7 @@ class AnalysisResponse(BaseModel):
     latitude: float
     longitude: float
     planting_sites: List[PlantingSiteResponse]
+    existing_trees: List[ExistingTreeResponse]
     existing_trees_count: int
     imagery_saved: bool
     timestamp: str
@@ -183,13 +193,17 @@ async def analyze_address(request: AnalysisRequest):
             async with db_manager.get_session() as session:
                 session.add(site_record)
                 await session.commit()
-                await session.refresh(site_record)
+                # Skip refresh - we already have all the values we need
+
+            # Use actual site lat/lon from CV pipeline (not center point)
+            site_lat = site_data.get('location_lat', latitude)
+            site_lon = site_data.get('location_lon', longitude)
 
             # Create response
             site_response = PlantingSiteResponse(
                 site_id=site_id,
-                location_lat=latitude,
-                location_lon=longitude,
+                location_lat=site_lat,
+                location_lon=site_lon,
                 avg_ndvi=round(avg_ndvi, 3),
                 ndvi_category=ndvi_category,
                 avg_slope=round(avg_slope, 2),
@@ -204,6 +218,19 @@ async def analyze_address(request: AnalysisRequest):
 
         logger.info(f"Stored {len(site_responses)} sites in database")
 
+        # Extract existing trees from result
+        existing_trees_data = result.get('existing_trees', [])
+        existing_trees_response = [
+            ExistingTreeResponse(
+                lat=tree['lat'],
+                lon=tree['lon'],
+                confidence=tree['confidence'],
+                bbox_width=tree.get('bbox_width', 0),
+                bbox_height=tree.get('bbox_height', 0)
+            )
+            for tree in existing_trees_data
+        ]
+
         # Build response
         response = AnalysisResponse(
             analysis_id=analysis_id,
@@ -211,7 +238,8 @@ async def analyze_address(request: AnalysisRequest):
             latitude=latitude,
             longitude=longitude,
             planting_sites=site_responses,
-            existing_trees_count=len(result.get('existing_trees', [])),
+            existing_trees=existing_trees_response,
+            existing_trees_count=result.get('existing_trees_count', len(existing_trees_response)),
             imagery_saved=request.save_images,
             timestamp=datetime.utcnow().isoformat()
         )

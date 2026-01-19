@@ -29,7 +29,11 @@ class GUID(TypeDecorator):
 
     def process_result_value(self, value, dialect):
         if value is not None:
-            return uuid_module.UUID(value)
+            # Handle various UUID formats that might come back from different drivers
+            if isinstance(value, uuid_module.UUID):
+                return value
+            # Convert string or other UUID-like objects to UUID
+            return uuid_module.UUID(str(value))
         return value
 
     def load_dialect_impl(self, dialect):

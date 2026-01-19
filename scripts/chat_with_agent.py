@@ -10,17 +10,10 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from agent.agent import SmartCanopyAgent
+from agent import SmartCanopyAgent
 from agent.services.plant_database import DatabaseManager
 from agent.services.cache_service import CacheService
-from agent.tools import (
-    SpeciesRecommenderTool,
-    PricingCalculatorTool,
-    EnvironmentalCalculatorTool,
-    HazardCheckerTool,
-    MaintenanceGuideTool,
-    PlantingInstructionsTool
-)
+from agent.tools import create_all_tools, create_standalone_tools
 from agent.config import settings
 import logging
 
@@ -36,38 +29,57 @@ async def main():
     print("="*80)
     print("\nInitializing agent...")
 
-    # Check if database is available
+    agent = None
+    tools = []
+
+    # Try to connect to database and create full agent
     try:
         db_manager = DatabaseManager(settings.database_url)
         cache_service = CacheService(settings.redis_url)
 
-        # Initialize all 7 tools
-        tools = [
-            SpeciesRecommenderTool(db_manager, cache_service),
-            PricingCalculatorTool(db_manager),
-            EnvironmentalCalculatorTool(db_manager, cache_service),
-            HazardCheckerTool(db_manager),
-            MaintenanceGuideTool(db_manager),
-            PlantingInstructionsTool(db_manager)
-            # PhotoAnalyzerTool not included (requires image upload)
-        ]
+        # Create all 7 tools using the factory
+        tools = create_all_tools(
+            db_manager=db_manager,
+            cache_service=cache_service,
+            include_photo_analyzer=True
+        )
+
+        # Create agent with tools
+        agent = SmartCanopyAgent(tools=tools)
 
         print(f"✅ Agent initialized with {len(tools)} tools!")
         print("\nAvailable tools:")
         for tool in tools:
-            print(f"  • {tool.name}")
+            print(f"  • {tool.name}: {tool.description[:60]}...")
 
     except Exception as e:
         print(f"⚠️  Database not available ({e})")
-        print("   Starting agent WITHOUT tools (conversation only)")
-        tools = []
 
-    # Create agent
-    agent = SmartCanopyAgent(tools=tools)
+        # Try to create agent with standalone tools only (PhotoAnalyzer)
+        try:
+            standalone_tools = create_standalone_tools()
+            if standalone_tools:
+                agent = SmartCanopyAgent(tools=standalone_tools)
+                tools = standalone_tools
+                print(f"✅ Agent initialized with {len(tools)} standalone tools!")
+                print("\nAvailable tools:")
+                for tool in tools:
+                    print(f"  • {tool.name}")
+            else:
+                agent = SmartCanopyAgent(tools=[])
+                print("   Starting agent WITHOUT tools (conversation only)")
+
+        except Exception as e2:
+            print(f"   Could not create standalone tools: {e2}")
+            agent = SmartCanopyAgent(tools=[])
+            print("   Starting agent WITHOUT tools (conversation only)")
 
     print("\n" + "="*80)
     print("Ready to chat! Type 'quit' or 'exit' to end the conversation.")
-    print("Tip: Ask about trees, environmental benefits, or request recommendations!")
+    print("\nTips:")
+    print("  • Ask about trees, environmental benefits, or request recommendations!")
+    print("  • Upload site photos for analysis (if photo_analyzer tool is available)")
+    print("  • Get pricing estimates, planting instructions, and maintenance guides")
     print("="*80 + "\n")
 
     # Conversation history
@@ -87,6 +99,40 @@ async def main():
                 print("\n🌳 Thanks for chatting! Happy tree planting! 🌱\n")
                 break
 
+            # Check for special commands
+            if user_message.lower() == '/tools':
+                print("\n📦 Available tools:")
+                if tools:
+                    for tool in tools:
+                        print(f"  • {tool.name}: {tool.description[:70]}...")
+                else:
+                    print("  No tools available (database not connected)")
+                print()
+                continue
+
+            if user_message.lower() == '/stats':
+                stats = agent.get_stats()
+                print("\n📊 Agent Statistics:")
+                print(f"  Model: {stats['model']}")
+                print(f"  Tools registered: {stats['tools_registered']}")
+                if stats['tool_stats']:
+                    print("  Tool usage:")
+                    for name, tool_stat in stats['tool_stats'].items():
+                        if tool_stat['execution_count'] > 0:
+                            print(f"    • {name}: {tool_stat['execution_count']} calls, "
+                                  f"avg {tool_stat['avg_time_ms']:.0f}ms")
+                print()
+                continue
+
+            if user_message.lower() == '/help':
+                print("\n📖 Commands:")
+                print("  /tools - List available tools")
+                print("  /stats - Show agent statistics")
+                print("  /help  - Show this help")
+                print("  quit   - Exit the chat")
+                print()
+                continue
+
             # Show thinking indicator
             print("\n🤖 SmartCanopy is thinking...\n")
 
@@ -105,7 +151,8 @@ async def main():
 
             # Show tool usage if any
             if response['tool_calls']:
-                print(f"[Used {len(response['tool_calls'])} tools: {', '.join(t['tool'] for t in response['tool_calls'])}]\n")
+                tool_names = [t['tool'] for t in response['tool_calls']]
+                print(f"[Used {len(response['tool_calls'])} tools: {', '.join(tool_names)}]\n")
 
             print("-" * 80 + "\n")
 
@@ -124,10 +171,10 @@ if __name__ == "__main__":
     print("\nPrerequisites:")
     print("  ✅ ANTHROPIC_API_KEY is set in .env")
     print("  ⚠️  Database is optional (agent works without it)")
-    print("\nIf you want to use tools (recommendations, pricing, etc.):")
+    print("\nFor full functionality (all 7 tools):")
     print("  1. Open Docker Desktop")
     print("  2. Run: docker compose up -d postgres redis")
-    print("  3. Wait ~30 seconds for containers to start")
+    print("  3. Run: python scripts/seed_plants.py")
     print("="*80)
 
     input("\nPress ENTER to start chatting...")

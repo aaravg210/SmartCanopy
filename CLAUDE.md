@@ -4,183 +4,144 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an **Urban Tree Planting Site Detection** system that identifies optimal locations for planting new trees in urban areas using satellite imagery, AI-powered tree detection, and geospatial analysis.
-
-The system analyzes addresses to:
-1. Fetch satellite imagery (NAIP) from Google Earth Engine
-2. Detect existing trees using DeepForest (pre-trained object detection model)
-3. Calculate vegetation health (NDVI) and terrain characteristics (slope)
-4. Filter out infrastructure (roads, buildings, parking) using OpenStreetMap
-5. Recommend optimal planting sites with suitability scores
+SmartCanopy is an AI-powered urban tree planting system that:
+1. Identifies optimal planting locations using satellite imagery (NAIP from Google Earth Engine)
+2. Detects existing trees using DeepForest (pre-trained object detection)
+3. Analyzes vegetation health (NDVI) and terrain (slope)
+4. Filters infrastructure (roads, buildings) using OpenStreetMap
+5. Provides tree species recommendations via a Claude-powered AI agent
 
 ## Environment Setup
 
-### Python Environment
-- Python 3.13
-- Use the existing virtual environment: `source venv/bin/activate`
-
-### Activate:
-Before running scripts, activate the venv with:
-source venv/bin/activate
-
-
-### Google Earth Engine Authentication
-**CRITICAL**: Before running any scripts, Google Earth Engine must be authenticated:
+### Quick Start
 ```bash
-earthengine authenticate
-```
-The project is configured to use GEE project ID: `urban-tree-ai`
-
-All scripts that use GEE call `ee.Initialize(project='urban-tree-ai')` - this will fail if authentication hasn't been completed.
-
-## Running the System
-
-### Test Individual Components
-
-1. **Test GEE Connection**:
-   ```bash
-   python test_gee.py
-   ```
-
-2. **Test DeepForest Tree Detection**:
-   ```bash
-   python test_deepforest.py
-   ```
-   Note: Modify the `image_path` variable in `__main__` to point to an existing RGB image
-
-3. **Test Data Pipeline** (fetch imagery for an address):
-   ```bash
-   python data_pipeline.py
-   ```
-   Modify `test_address` in `__main__` to analyze different locations
-
-4. **Download Imagery Locally**:
-   ```bash
-   python download_imagery.py
-   ```
-   Modify `test_address` and `output_dir` as needed
-
-5. **Test OSM Infrastructure Filtering**:
-   ```bash
-   python osm_filter.py
-   ```
-
-### Full Analysis Pipeline
-
-Run the complete planting site detection:
-```bash
-python planting_site_detector.py
+source venv/bin/activate   # Python 3.13 venv
+earthengine authenticate    # Required for GEE (project ID: urban-tree-ai)
+docker-compose up -d postgres redis  # Start databases
+cp .env.example .env        # Configure API keys
 ```
 
-Modify the `test_address` and `buffer_m` (analysis radius in meters) in the `__main__` block to analyze different locations.
+### Required Environment Variables
+- `ANTHROPIC_API_KEY` - Required for AI agent
+- `DATABASE_URL` - PostgreSQL (default: `postgresql+asyncpg://smartcanopy:password@localhost:5432/smartcanopy`)
+- `REDIS_URL` - Redis cache (default: `redis://localhost:6379/0`)
+
+## Common Commands
+
+### Run Components
+```bash
+# CV Pipeline
+python test_gee.py                # Test GEE connection
+python planting_site_detector.py  # Full analysis pipeline
+
+# API Server
+uvicorn api.main:app --reload     # Start FastAPI at :8000
+python scripts/run_api.py         # Alternative
+
+# Interactive Testing
+python scripts/chat_with_agent.py # Chat with AI agent
+python scripts/test_agent.py      # Test agent tools
+```
+
+### Run Tests
+```bash
+pytest                            # Run all tests
+pytest -m unit                    # Unit tests only
+pytest -m integration             # Integration tests
+pytest -m "not requires_api_key"  # Skip tests needing API keys
+pytest tests/tools/               # Test specific tools
+pytest --cov=agent --cov=api      # With coverage
+```
+
+### Database
+```bash
+python scripts/seed_plants.py     # Seed plant species data
+python scripts/query_database.py  # Query utilities
+docker-compose --profile tools up pgadmin  # DB admin UI at :5050
+```
 
 ## Architecture
 
-### Data Flow Pipeline
-
 ```
-Address Input
-    ↓
-[data_pipeline.py] → Geocoding (geopy) → Coordinates
-    ↓
-    └→ Google Earth Engine
-       ├→ Fetch NAIP imagery (RGB + NIR)
-       ├→ Calculate NDVI
-       └→ Fetch terrain (elevation, slope)
-    ↓
-[download_imagery.py] → Download images locally
-    ↓
-[test_deepforest.py] → DeepForest model → Existing tree locations
-    ↓
-[osm_filter.py] → OpenStreetMap → Infrastructure exclusion masks
-    ↓
-[planting_site_detector.py] → Combine all data
-    ↓
-Planting Site Recommendations (with suitability scores)
+Address → [data_pipeline.py] → GEE (NAIP/NDVI/Slope)
+                ↓
+        [download_imagery.py] → Local images
+                ↓
+        [test_deepforest.py] → Tree detection
+                ↓
+        [osm_filter.py] → Infrastructure mask
+                ↓
+        [planting_site_detector.py] → Suitability scores
+                ↓
+        PostgreSQL → [agent/] → Claude API → FastAPI → Client
 ```
 
 ### Key Components
 
-**data_pipeline.py** (`TreeDataPipeline` class):
-- Core GEE integration
-- Geocoding addresses to coordinates
-- Fetching NAIP imagery (RGB + NIR bands)
-- NDVI calculation: `(NIR - Red) / (NIR + Red)`
-- Terrain data from SRTM DEM
-- Generates visualization URLs for GEE images
+**CV Pipeline** (root level):
+- `data_pipeline.py` - `TreeDataPipeline`: GEE integration, NDVI calculation
+- `download_imagery.py` - `ImageryDownloader`: Local image downloads
+- `test_deepforest.py` - `DeepForestDetector`: Tree detection with bounding boxes
+- `osm_filter.py` - `OSMFilter`: Infrastructure exclusion masks
+- `planting_site_detector.py` - `PlantingSiteDetector`: Orchestrates full pipeline
 
-**download_imagery.py** (`ImageryDownloader` class):
-- Downloads GEE imagery to local files (RGB, NDVI, slope)
-- Saves to `test_data/` or `analysis_data/` directories
-- Creates filename-safe address strings
+**AI Agent** (`agent/`):
+- `agent.py` - `SmartCanopyAgent`: Claude API integration, tool orchestration
+- `config.py` - Pydantic settings from environment
+- `tools/` - 7 specialized tools inheriting from `BaseTool`:
+  - `species_recommender.py` - Tree recommendations by climate/space/soil
+  - `pricing_calculator.py` - Cost estimates with regional multipliers
+  - `environmental_calculator.py` - CO2, stormwater, air quality benefits
+  - `hazard_checker.py` - Safety clearances (utilities, buildings)
+  - `photo_analyzer.py` - Site photo analysis via Claude Vision
+  - `maintenance_guide.py` - Watering/pruning schedules
+  - `planting_instructions.py` - Step-by-step guides
+- `services/` - Data layer:
+  - `plant_database.py` - SQLAlchemy models (PlantSpecies, PlantingSite, etc.)
+  - `cache_service.py` - Redis caching with TTL
+  - `hardiness_zone_api.py` - USDA zone lookups
 
-**test_deepforest.py** (`DeepForestDetector` class):
-- Loads pre-trained DeepForest model for tree detection
-- `predict_trees()`: Detects trees in RGB images with confidence threshold
-- Returns bounding boxes (xmin, ymin, xmax, ymax) with confidence scores
-- `visualize_predictions()`: Creates visualization with detected trees
+**API** (`api/`):
+- `main.py` - FastAPI app with async context managers
+- `routes/` - Endpoints for agent, species, sites, CV operations
 
-**osm_filter.py** (`OSMFilter` class):
-- Fetches infrastructure from OpenStreetMap (roads, buildings, parking)
-- Creates binary exclusion masks (True = don't plant here)
-- Applies 3-meter buffer around infrastructure
-- Filters planting sites to avoid infrastructure
+### Database Schema
+Core tables in `database/schema.sql`:
+- `plant_species` - Species with environmental benefits, pricing, hardiness zones
+- `planting_sites` - CV analysis results with suitability scores
+- `analyses` - Analysis runs with imagery paths
+- `conversations` - Agent chat history
 
-**planting_site_detector.py** (`PlantingSiteDetector` class):
-- Orchestrates the complete analysis pipeline
-- Combines tree detection, NDVI, slope, and OSM filtering
-- `find_planting_sites()`: Identifies suitable locations using:
-  - NDVI range: 0.15-0.65 (enough vegetation, not dense forest)
-  - Slope: < 15° (flat enough to plant)
-  - No existing trees (from DeepForest)
-  - Minimum area: 100 pixels
-- Calculates suitability scores (0-1) based on NDVI and slope
-- `visualize_with_osm()`: Creates visualization showing exclusions and recommended sites
+## Key Parameters
 
-### Data Storage
+| Parameter | Default | Location |
+|-----------|---------|----------|
+| NDVI range | 0.15-0.65 | `planting_site_detector.py:find_planting_sites()` |
+| Slope max | 15° | `planting_site_detector.py:find_planting_sites()` |
+| DeepForest confidence | 0.3 | `test_deepforest.py:predict_trees()` |
+| Infrastructure buffer | 3m | `osm_filter.py` |
+| Analysis buffer | 100m | `buffer_m` parameter |
+| Image size | 512x512 | `get_image_url()` |
 
-- `cache/`: GEE API response caching (JSON files by hash)
-- `test_data/`: Sample downloaded imagery for testing
-- `analysis_data/`: Full analysis outputs with imagery and results
-- `claude/skills/`: Claude Code skills from anthropics/skills repository
+## Testing
 
-### Key Parameters
+Tests in `tests/` use pytest with markers defined in `pytest.ini`:
+- `@pytest.mark.unit` - Unit tests
+- `@pytest.mark.integration` - API integration
+- `@pytest.mark.e2e` - End-to-end scenarios
+- `@pytest.mark.requires_api_key` - Needs ANTHROPIC_API_KEY
+- `@pytest.mark.requires_gee` - Needs GEE auth
+- `@pytest.mark.requires_redis` - Needs Redis
 
-**Buffer Radius** (`buffer_m`):
-- Default: 100m for analysis, 500m for data fetching
-- Controls the geographic area analyzed around the address
-- Larger buffers = more area but slower processing
-
-**NDVI Thresholds** (in `planting_site_detector.py:find_planting_sites()`):
-- Min: 0.15 (excludes pavement, bare soil)
-- Max: 0.65 (excludes dense existing forest)
-- Adjust these to change what counts as "suitable"
-
-**Slope Threshold**:
-- Max: 15° (in `find_planting_sites()`)
-- Terrain steeper than this is excluded
-
-**DeepForest Confidence**:
-- Default: 0.3 (in `test_deepforest.py:predict_trees()`)
-- Lower = more tree detections (including false positives)
-- Higher = fewer, more confident detections
+Fixtures in `tests/conftest.py` provide:
+- `db_manager` - In-memory SQLite for tests
+- `cache_service` - Isolated Redis DB 15
+- `sample_species`, `sample_planting_site` - Test data
+- `mock_anthropic_response` - Mock Claude API
 
 ## Important Notes
 
-### Coordinate Systems
-- Input/output: WGS84 lat/lon (EPSG:4326)
-- OSM buffering temporarily converts to Web Mercator (EPSG:3857) for meter-based buffers
-
-### Image Resolution
-- NAIP imagery: 1m resolution (typical)
-- SRTM terrain: 30m resolution
-- Downloaded images: 512x512 pixels by default (controlled in `get_image_url()`)
-
-### GEE Rate Limits
-- The system uses GEE's `getThumbURL()` which has rate limits
-- Large buffer areas or many requests may hit limits
-- The `cache/` directory helps avoid repeated GEE requests
-
-### Model Files
-- DeepForest downloads pre-trained weights on first run via `model.use_release()`
-- Subsequent runs use cached weights
+- **Coordinate Systems**: WGS84 (EPSG:4326) for I/O, Web Mercator (EPSG:3857) for OSM buffering
+- **GEE Rate Limits**: `cache/` directory stores API responses to avoid repeated requests
+- **DeepForest**: Downloads weights on first run via `model.use_release()`
+- **All GEE scripts** call `ee.Initialize(project='urban-tree-ai')` - auth required first

@@ -43,7 +43,10 @@ class SmartCanopyAgent:
                 "Anthropic API key required. Set ANTHROPIC_API_KEY in .env file"
             )
 
+        # Use sync client for non-streaming operations
         self.client = anthropic.Anthropic(api_key=self.api_key)
+        # Use async client for streaming operations
+        self.async_client = anthropic.AsyncAnthropic(api_key=self.api_key)
         self.model = model or settings.claude_model
         self.max_tokens = settings.claude_max_tokens
         self.temperature = settings.claude_temperature
@@ -272,8 +275,8 @@ class SmartCanopyAgent:
             rounds += 1
 
             try:
-                # Stream Claude API response
-                async with self.client.messages.stream(
+                # Stream Claude API response using async client
+                async with self.async_client.messages.stream(
                     model=self.model,
                     max_tokens=self.max_tokens,
                     temperature=self.temperature,
