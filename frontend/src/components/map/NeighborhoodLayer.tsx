@@ -154,66 +154,71 @@ export default function NeighborhoodLayer({ map }: NeighborhoodLayerProps) {
           'text-halo-width': 1.5,
         },
       })
+    }
 
-      // Click handler
-      map.on('click', FILL_LAYER_ID, (e) => {
-        if (e.features && e.features[0]) {
-          const props = e.features[0].properties
-          const neighborhood: NeighborhoodCell = {
-            id: props?.id || '',
-            cityId: props?.cityId || '',
-            name: props?.name || '',
-            geometry: (e.features[0].geometry as GeoJSON.Polygon),
-            canopyPercentage: props?.canopyPercentage || 0,
-            heatIslandIndex: props?.heatIslandIndex || 0,
-            needScore: props?.needScore || 0,
-            center: [props?.centerLng || 0, props?.centerLat || 0],
-          }
-
-          selectNeighborhood(neighborhood)
-          flyToNeighborhood(neighborhood)
+    // Define event handlers outside the else block so they register every time
+    const handleClick = (e: mapboxgl.MapLayerMouseEvent) => {
+      if (e.features && e.features[0]) {
+        const props = e.features[0].properties
+        const neighborhood: NeighborhoodCell = {
+          id: props?.id || '',
+          cityId: props?.cityId || '',
+          name: props?.name || '',
+          geometry: (e.features[0].geometry as GeoJSON.Polygon),
+          canopyPercentage: props?.canopyPercentage || 0,
+          heatIslandIndex: props?.heatIslandIndex || 0,
+          needScore: props?.needScore || 0,
+          center: [props?.centerLng || 0, props?.centerLat || 0],
         }
-      })
 
-      // Hover handler
-      map.on('mouseenter', FILL_LAYER_ID, (e) => {
-        map.getCanvas().style.cursor = 'pointer'
+        selectNeighborhood(neighborhood)
+        flyToNeighborhood(neighborhood)
+      }
+    }
 
-        if (e.features && e.features[0]) {
-          const props = e.features[0].properties
-          const center = [props?.centerLng || 0, props?.centerLat || 0] as [number, number]
+    // Use mousemove instead of mouseenter to track mouse position
+    const handleMouseMove = (e: mapboxgl.MapLayerMouseEvent) => {
+      map.getCanvas().style.cursor = 'pointer'
 
-          // Remove existing popup
-          if (popup.current) {
-            popup.current.remove()
-          }
+      if (e.features && e.features[0]) {
+        const props = e.features[0].properties
 
-          popup.current = new mapboxgl.Popup({
-            closeButton: false,
-            closeOnClick: false,
-            offset: 10,
-          })
-            .setLngLat(center)
-            .setHTML(
-              createNeighborhoodPopupHTML({
-                name: props?.name || '',
-                canopyPercentage: props?.canopyPercentage || 0,
-                heatIslandIndex: props?.heatIslandIndex || 0,
-                needScore: props?.needScore || 0,
-              })
-            )
-            .addTo(map)
-        }
-      })
-
-      map.on('mouseleave', FILL_LAYER_ID, () => {
-        map.getCanvas().style.cursor = ''
+        // Remove existing popup
         if (popup.current) {
           popup.current.remove()
-          popup.current = null
         }
-      })
+
+        // Use actual mouse coordinates instead of cell center
+        popup.current = new mapboxgl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          offset: 15,
+        })
+          .setLngLat(e.lngLat)
+          .setHTML(
+            createNeighborhoodPopupHTML({
+              name: props?.name || '',
+              canopyPercentage: props?.canopyPercentage || 0,
+              heatIslandIndex: props?.heatIslandIndex || 0,
+              needScore: props?.needScore || 0,
+            })
+          )
+          .addTo(map)
+      }
     }
+
+    const handleMouseLeave = () => {
+      map.getCanvas().style.cursor = ''
+      if (popup.current) {
+        popup.current.remove()
+        popup.current = null
+      }
+    }
+
+    // Register event handlers
+    map.on('click', FILL_LAYER_ID, handleClick)
+    map.on('mousemove', FILL_LAYER_ID, handleMouseMove)
+    map.on('mouseleave', FILL_LAYER_ID, handleMouseLeave)
 
     // Update visibility based on tier
     const isVisible = currentTier === 'neighborhood'
@@ -222,6 +227,11 @@ export default function NeighborhoodLayer({ map }: NeighborhoodLayerProps) {
     map.setLayoutProperty(LABEL_LAYER_ID, 'visibility', isVisible ? 'visible' : 'none')
 
     return () => {
+      // Remove event handlers
+      map.off('click', FILL_LAYER_ID, handleClick)
+      map.off('mousemove', FILL_LAYER_ID, handleMouseMove)
+      map.off('mouseleave', FILL_LAYER_ID, handleMouseLeave)
+
       if (popup.current) {
         popup.current.remove()
       }

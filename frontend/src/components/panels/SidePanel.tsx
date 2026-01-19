@@ -20,7 +20,7 @@ export default function SidePanel({ askAITrigger = 0 }: SidePanelProps) {
   useEffect(() => {
     if (askAITrigger > 0 && selectedSite) {
       // Create a contextual initial message based on the selected site
-      const initialMsg = `I'm looking at planting site #${selectedSite.site_id.slice(0, 8)} at ${currentAnalysis?.address || 'this location'}. It has ${selectedSite.ndvi_category.replace(/_/g, ' ')} vegetation, ${selectedSite.slope_category} terrain, and about ${selectedSite.area_sq_ft.toLocaleString()} square feet of space. What tree species would you recommend for this site?`
+      const initialMsg = `I'm looking at planting site #${selectedSite.site_id.slice(0, 8)} at ${currentAnalysis?.address || 'this location'}. It has ${selectedSite.ndvi_category.replace(/_/g, ' ')} vegetation and ${selectedSite.slope_category} terrain. What tree species would you recommend for this site?`
       setChatInitialMessage(initialMsg)
       setChatOpen(true)
     }

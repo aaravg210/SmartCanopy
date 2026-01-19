@@ -12,7 +12,6 @@ interface SitePopupProps {
   suitabilityScore: number
   ndviCategory: string
   slopeCategory: string
-  areaSqFt: number
   hasNearbyRoads: boolean
   hasNearbyBuildings: boolean
   isClickPopup?: boolean
@@ -57,10 +56,6 @@ function createSitePopupHTML(props: SitePopupProps): string {
         <div style="display: flex; justify-content: space-between;">
           <span style="color: #9ca3af;">Terrain</span>
           <span style="color: #374151; text-transform: capitalize;">${props.slopeCategory}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between;">
-          <span style="color: #9ca3af;">Area</span>
-          <span style="color: #374151;">${props.areaSqFt.toLocaleString()} sq ft</span>
         </div>
       </div>
 
@@ -361,7 +356,6 @@ export default function StreetLayer({ map, onAskAI }: StreetLayerProps) {
                 suitabilityScore: props?.suitability_score || 0,
                 ndviCategory: props?.ndvi_category || '',
                 slopeCategory: props?.slope_category || '',
-                areaSqFt: props?.area_sq_ft || 0,
                 hasNearbyRoads: props?.has_nearby_roads || false,
                 hasNearbyBuildings: props?.has_nearby_buildings || false,
                 isClickPopup: true,
@@ -400,7 +394,6 @@ export default function StreetLayer({ map, onAskAI }: StreetLayerProps) {
               suitabilityScore: props?.suitability_score || 0,
               ndviCategory: props?.ndvi_category || '',
               slopeCategory: props?.slope_category || '',
-              areaSqFt: props?.area_sq_ft || 0,
               hasNearbyRoads: props?.has_nearby_roads || false,
               hasNearbyBuildings: props?.has_nearby_buildings || false,
               isClickPopup: false,

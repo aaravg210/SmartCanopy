@@ -95,13 +95,6 @@ export default function SiteDetailPanel({ site, analysisAddress, onOpenChat }: S
           </div>
 
           <div className="bg-gray-50 rounded-lg p-3">
-            <div className="text-xs text-gray-500 mb-1">Available Area</div>
-            <div className="font-medium text-gray-900 text-sm">
-              {site.area_sq_ft.toLocaleString()} sq ft
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-3">
             <div className="text-xs text-gray-500 mb-1">Location</div>
             <div className="font-medium text-gray-900 text-xs">
               {site.location_lat.toFixed(5)},
@@ -176,7 +169,7 @@ export default function SiteDetailPanel({ site, analysisAddress, onOpenChat }: S
       {/* Action Buttons */}
       <div className="space-y-3">
         <button
-          onClick={() => onOpenChat?.(`What tree species would you recommend for this planting site? It has ${site.ndvi_category.replace(/_/g, ' ')} vegetation, ${site.slope_category} terrain, and ${site.area_sq_ft} square feet of space.`)}
+          onClick={() => onOpenChat?.(`What tree species would you recommend for this planting site? It has ${site.ndvi_category.replace(/_/g, ' ')} vegetation and ${site.slope_category} terrain.`)}
           className="w-full bg-canopy-500 hover:bg-canopy-600 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
         >
           <svg
