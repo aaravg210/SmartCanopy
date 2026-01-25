@@ -11,14 +11,14 @@ SmartCanopy combines:
 
 ## Features
 
-### CV Model (✅ Complete)
+### CV Model
 - Fetch satellite imagery from Google Earth Engine
 - Detect existing trees using DeepForest
 - Calculate NDVI (vegetation health) and slope (terrain)
 - Filter out unsuitable areas (roads, buildings, parking)
 - Generate planting site recommendations with suitability scores
 
-### AI Agent (🚧 In Progress)
+### AI Agent
 1. **Tree Species Recommendations** - Based on climate, space, soil, and user preferences
 2. **Pricing Estimates** - Cost calculator for trees and planting
 3. **Environmental Benefits** - CO2 sequestration, stormwater, air quality calculations
