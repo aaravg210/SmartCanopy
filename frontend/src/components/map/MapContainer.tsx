@@ -21,8 +21,6 @@ export default function MapContainer() {
   const map = useRef<mapboxgl.Map | null>(null)
   const popup = useRef<mapboxgl.Popup | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
-  const [askAITrigger, setAskAITrigger] = useState(0)
-
   const {
     setMapInstance,
     setViewState,
@@ -33,12 +31,6 @@ export default function MapContainer() {
   } = useMapStore()
 
   const { currentAnalysis, selectedSite } = useAnalysisStore()
-
-  // Handle "Ask SmartCanopy AI" button click from popup
-  const handleAskAI = useCallback((siteId: string) => {
-    // Increment trigger to signal SidePanel to open chat
-    setAskAITrigger(prev => prev + 1)
-  }, [])
 
   // Handle city click
   const handleCityClick = useCallback((cityId: string) => {
@@ -236,7 +228,7 @@ export default function MapContainer() {
 
       {/* Street layer - rendered when map is loaded */}
       {mapLoaded && mapInstance && (
-        <StreetLayer map={mapInstance} onAskAI={handleAskAI} />
+        <StreetLayer map={mapInstance} />
       )}
 
       {/* Map controls overlay */}
@@ -246,7 +238,7 @@ export default function MapContainer() {
       <Legend />
 
       {/* Side panel for site details */}
-      <SidePanel askAITrigger={askAITrigger} />
+      <SidePanel />
     </div>
   )
 }

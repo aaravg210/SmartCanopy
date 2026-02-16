@@ -169,7 +169,7 @@ export default function SiteDetailPanel({ site, analysisAddress, onOpenChat }: S
       {/* Action Buttons */}
       <div className="space-y-3">
         <button
-          onClick={() => onOpenChat?.(`What tree species would you recommend for this planting site? It has ${site.ndvi_category.replace(/_/g, ' ')} vegetation and ${site.slope_category} terrain.`)}
+          onClick={() => onOpenChat?.(`I'm looking at planting site #${site.site_id.slice(0, 8)} at ${analysisAddress || 'this location'}. It has ${site.ndvi_category.replace(/_/g, ' ')} vegetation and ${site.slope_category} terrain. What tree species would you recommend for this site?`)}
           className="w-full bg-canopy-500 hover:bg-canopy-600 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
         >
           <svg
@@ -189,7 +189,7 @@ export default function SiteDetailPanel({ site, analysisAddress, onOpenChat }: S
         </button>
 
         <button
-          onClick={() => onOpenChat?.(`I want to plant a tree at this site! Can you help me with: 1) The best tree species for this location 2) Cost estimates 3) Planting instructions`)}
+          onClick={() => onOpenChat?.(`I'm looking at planting site #${site.site_id.slice(0, 8)} at ${analysisAddress || 'this location'}. It has ${site.ndvi_category.replace(/_/g, ' ')} vegetation and ${site.slope_category} terrain with ${site.area_sq_ft} sq ft of space. I want to plant a tree here! Please help me with: 1) The best tree species for this location 2) Cost estimates 3) Step-by-step planting instructions`)}
           className="w-full bg-canopy-50 hover:bg-canopy-100 text-canopy-700 font-medium py-3 px-4 rounded-lg transition-colors border border-canopy-200 flex items-center justify-center gap-2"
         >
           <svg

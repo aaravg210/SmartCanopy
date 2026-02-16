@@ -14,7 +14,6 @@ interface SitePopupProps {
   slopeCategory: string
   hasNearbyRoads: boolean
   hasNearbyBuildings: boolean
-  isClickPopup?: boolean
 }
 
 function createSitePopupHTML(props: SitePopupProps): string {
@@ -75,53 +74,23 @@ function createSitePopupHTML(props: SitePopupProps): string {
         </div>
       ` : ''}
 
-      ${props.isClickPopup ? `
-        <button
-          class="ask-smartcanopy-ai-btn"
-          data-site-id="${props.siteId}"
-          style="
-            width: 100%;
-            padding: 10px 12px;
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            margin-top: 8px;
-            transition: transform 0.1s, box-shadow 0.1s;
-          "
-          onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(34,197,94,0.4)';"
-          onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';"
-        >
-          <span style="font-size: 16px;">🌳</span>
-          Ask SmartCanopy AI
-        </button>
-      ` : `
-        <div style="
-          font-size: 11px;
-          color: #6b7280;
-          padding-top: 8px;
-          border-top: 1px solid #e5e7eb;
-        ">
-          Click for details & recommendations
-        </div>
-      `}
+      <div style="
+        font-size: 11px;
+        color: #6b7280;
+        padding-top: 8px;
+        border-top: 1px solid #e5e7eb;
+      ">
+        Click for details & recommendations
+      </div>
     </div>
   `
 }
 
 interface StreetLayerProps {
   map: mapboxgl.Map
-  onAskAI?: (siteId: string) => void
 }
 
-export default function StreetLayer({ map, onAskAI }: StreetLayerProps) {
+export default function StreetLayer({ map }: StreetLayerProps) {
   const hoverPopup = useRef<mapboxgl.Popup | null>(null)
   const clickPopup = useRef<mapboxgl.Popup | null>(null)
   const { currentTier } = useMapStore()
@@ -358,7 +327,6 @@ export default function StreetLayer({ map, onAskAI }: StreetLayerProps) {
                 slopeCategory: props?.slope_category || '',
                 hasNearbyRoads: props?.has_nearby_roads || false,
                 hasNearbyBuildings: props?.has_nearby_buildings || false,
-                isClickPopup: true,
               })
             )
             .addTo(map)
@@ -396,7 +364,6 @@ export default function StreetLayer({ map, onAskAI }: StreetLayerProps) {
               slopeCategory: props?.slope_category || '',
               hasNearbyRoads: props?.has_nearby_roads || false,
               hasNearbyBuildings: props?.has_nearby_buildings || false,
-              isClickPopup: false,
             })
           )
           .addTo(map)
@@ -452,29 +419,6 @@ export default function StreetLayer({ map, onAskAI }: StreetLayerProps) {
       }
     }
   }, [map, currentAnalysis, currentTier, selectSite])
-
-  // Event listener for "Ask SmartCanopy AI" button clicks
-  useEffect(() => {
-    const handleAskAIClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (target.classList.contains('ask-smartcanopy-ai-btn')) {
-        const siteId = target.dataset.siteId
-        if (siteId && onAskAI) {
-          // Close the popup
-          if (clickPopup.current) {
-            clickPopup.current.remove()
-            clickPopup.current = null
-          }
-          onAskAI(siteId)
-        }
-      }
-    }
-
-    document.addEventListener('click', handleAskAIClick)
-    return () => {
-      document.removeEventListener('click', handleAskAIClick)
-    }
-  }, [onAskAI])
 
   return null
 }
