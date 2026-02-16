@@ -66,9 +66,6 @@ export default function Legend() {
               <span className="text-xs text-gray-600">Good Coverage</span>
             </div>
           </div>
-          <p className="text-xs text-gray-500 mt-2 pt-2 border-t">
-            Click a neighborhood to view planting sites
-          </p>
         </>
       )}
 

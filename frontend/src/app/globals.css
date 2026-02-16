@@ -31,6 +31,11 @@ body {
   height: 100vh;
 }
 
+/* Prevent hover popup from intercepting mouse events */
+.no-pointer-events {
+  pointer-events: none !important;
+}
+
 /* Mapbox popup styling */
 .mapboxgl-popup-content {
   padding: 0;

@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from agent import SmartCanopyAgent
 from agent.services.plant_database import DatabaseManager
 from agent.services.cache_service import CacheService
-from agent.tools import create_all_tools, create_standalone_tools
+from agent.tools import create_all_tools
 from agent.config import settings
 import logging
 
@@ -37,11 +37,10 @@ async def main():
         db_manager = DatabaseManager(settings.database_url)
         cache_service = CacheService(settings.redis_url)
 
-        # Create all 7 tools using the factory
+        # Create all tools using the factory
         tools = create_all_tools(
             db_manager=db_manager,
             cache_service=cache_service,
-            include_photo_analyzer=True
         )
 
         # Create agent with tools
@@ -55,30 +54,13 @@ async def main():
     except Exception as e:
         print(f"⚠️  Database not available ({e})")
 
-        # Try to create agent with standalone tools only (PhotoAnalyzer)
-        try:
-            standalone_tools = create_standalone_tools()
-            if standalone_tools:
-                agent = SmartCanopyAgent(tools=standalone_tools)
-                tools = standalone_tools
-                print(f"✅ Agent initialized with {len(tools)} standalone tools!")
-                print("\nAvailable tools:")
-                for tool in tools:
-                    print(f"  • {tool.name}")
-            else:
-                agent = SmartCanopyAgent(tools=[])
-                print("   Starting agent WITHOUT tools (conversation only)")
-
-        except Exception as e2:
-            print(f"   Could not create standalone tools: {e2}")
-            agent = SmartCanopyAgent(tools=[])
-            print("   Starting agent WITHOUT tools (conversation only)")
+        agent = SmartCanopyAgent(tools=[])
+        print("   Starting agent WITHOUT tools (conversation only)")
 
     print("\n" + "="*80)
     print("Ready to chat! Type 'quit' or 'exit' to end the conversation.")
     print("\nTips:")
     print("  • Ask about trees, environmental benefits, or request recommendations!")
-    print("  • Upload site photos for analysis (if photo_analyzer tool is available)")
     print("  • Get pricing estimates, planting instructions, and maintenance guides")
     print("="*80 + "\n")
 

@@ -40,21 +40,19 @@ def create_agent(
     model: Optional[str] = None,
     database_url: Optional[str] = None,
     redis_url: Optional[str] = None,
-    include_photo_analyzer: bool = True,
     tools: Optional[List[BaseTool]] = None
 ) -> SmartCanopyAgent:
     """
     Create a fully configured SmartCanopy agent with all tools.
 
     This is the recommended way to create an agent instance. It handles
-    dependency injection for all 7 tools automatically.
+    dependency injection for all tools automatically.
 
     Args:
         api_key: Anthropic API key (defaults to ANTHROPIC_API_KEY env var)
         model: Claude model to use (defaults to settings.claude_model)
         database_url: PostgreSQL URL (defaults to DATABASE_URL env var)
         redis_url: Redis URL (defaults to REDIS_URL env var)
-        include_photo_analyzer: Whether to include photo analysis tool
         tools: Optional list of pre-configured tools (overrides automatic creation)
 
     Returns:
@@ -63,12 +61,6 @@ def create_agent(
     Example:
         >>> # Simple usage with defaults
         >>> agent = create_agent()
-        >>>
-        >>> # Custom configuration
-        >>> agent = create_agent(
-        ...     database_url="postgresql+asyncpg://localhost/smartcanopy",
-        ...     include_photo_analyzer=False
-        ... )
         >>>
         >>> # Use the agent
         >>> response = await agent.chat("What trees grow well in zone 7?")
@@ -88,7 +80,6 @@ def create_agent(
         tools = create_all_tools(
             db_manager=db_manager,
             cache_service=cache_service,
-            include_photo_analyzer=include_photo_analyzer
         )
 
         logger.info(f"Created agent with {len(tools)} tools")
@@ -105,7 +96,6 @@ def create_agent_with_tools(
     cache_service: Optional[CacheService] = None,
     api_key: Optional[str] = None,
     model: Optional[str] = None,
-    include_photo_analyzer: bool = True
 ) -> SmartCanopyAgent:
     """
     Create an agent with explicit database and cache dependencies.
@@ -118,7 +108,6 @@ def create_agent_with_tools(
         cache_service: Optional pre-configured cache service
         api_key: Anthropic API key
         model: Claude model to use
-        include_photo_analyzer: Whether to include photo analysis tool
 
     Returns:
         Configured SmartCanopyAgent instance
@@ -137,7 +126,6 @@ def create_agent_with_tools(
     tools = create_all_tools(
         db_manager=db_manager,
         cache_service=cache_service,
-        include_photo_analyzer=include_photo_analyzer
     )
 
     return SmartCanopyAgent(

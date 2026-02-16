@@ -13,7 +13,6 @@ from agent.tools.environmental_calculator import EnvironmentalCalculatorTool
 from agent.tools.hazard_checker import HazardCheckerTool
 from agent.tools.maintenance_guide import MaintenanceGuideTool
 from agent.tools.planting_instructions import PlantingInstructionsTool
-from agent.tools.photo_analyzer import PhotoAnalyzerTool
 from agent.services.plant_database import DatabaseManager
 from agent.services.cache_service import CacheService
 
@@ -23,7 +22,6 @@ logger = logging.getLogger(__name__)
 def create_all_tools(
     db_manager: DatabaseManager,
     cache_service: Optional[CacheService] = None,
-    include_photo_analyzer: bool = True
 ) -> List[BaseTool]:
     """
     Create all SmartCanopy agent tools with dependencies.
@@ -31,7 +29,6 @@ def create_all_tools(
     Args:
         db_manager: Database manager for data access
         cache_service: Optional cache service for performance
-        include_photo_analyzer: Whether to include photo analyzer (requires API key)
 
     Returns:
         List of initialized tool instances
@@ -71,14 +68,6 @@ def create_all_tools(
     tools.append(PlantingInstructionsTool(db_manager))
     logger.debug("Created PlantingInstructionsTool")
 
-    # 7. Photo Analyzer - analyzes site photos using Claude Vision
-    if include_photo_analyzer:
-        try:
-            tools.append(PhotoAnalyzerTool())
-            logger.debug("Created PhotoAnalyzerTool")
-        except Exception as e:
-            logger.warning(f"Could not create PhotoAnalyzerTool: {e}")
-
     logger.info(f"Created {len(tools)} tools")
     return tools
 
@@ -89,7 +78,6 @@ def create_database_tools(
 ) -> List[BaseTool]:
     """
     Create only tools that require database access.
-    Excludes PhotoAnalyzerTool which only needs the API key.
 
     Args:
         db_manager: Database manager for data access
@@ -101,27 +89,17 @@ def create_database_tools(
     return create_all_tools(
         db_manager=db_manager,
         cache_service=cache_service,
-        include_photo_analyzer=False
     )
 
 
 def create_standalone_tools() -> List[BaseTool]:
     """
     Create tools that don't require database access.
-    Currently only PhotoAnalyzerTool.
 
     Returns:
         List of standalone tool instances
     """
-    tools: List[BaseTool] = []
-
-    try:
-        tools.append(PhotoAnalyzerTool())
-        logger.debug("Created PhotoAnalyzerTool")
-    except Exception as e:
-        logger.warning(f"Could not create PhotoAnalyzerTool: {e}")
-
-    return tools
+    return []
 
 
 # Tool metadata for documentation/introspection
@@ -162,10 +140,4 @@ TOOL_INFO = {
         'requires_cache': False,
         'description': 'Generates step-by-step planting guides'
     },
-    'photo_analyzer': {
-        'class': PhotoAnalyzerTool,
-        'requires_db': False,
-        'requires_cache': False,
-        'description': 'Analyzes site photos using Claude Vision'
-    }
 }

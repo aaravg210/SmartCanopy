@@ -41,9 +41,10 @@ export default function MapControls() {
               <svg
                 className="w-5 h-5 text-white"
                 fill="currentColor"
-                viewBox="0 0 20 20"
+                viewBox="0 0 24 24"
               >
-                <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z" />
+                <path d="M12 3L5 10h3l-3 5h3l-4 6h16l-4-6h3l-3-5h3L12 3z" />
+                <rect x="10.5" y="21" width="3" height="3" rx="0.5" />
               </svg>
             </div>
             <div>
@@ -119,7 +120,7 @@ export default function MapControls() {
       </div>
 
       {/* Search / Analyze Address */}
-      <div className="absolute top-20 left-4 z-10">
+      <div className="absolute top-[5.5rem] left-4 z-10">
         {!showSearch ? (
           <button
             onClick={() => setShowSearch(true)}
@@ -235,7 +236,7 @@ export default function MapControls() {
 
       {/* Analysis Results Summary */}
       {currentAnalysis && currentTier === 'street' && (
-        <div className="absolute top-20 right-4 z-10">
+        <div className="absolute top-2.5 right-16 z-10">
           <div className="bg-white rounded-lg shadow-lg p-4 w-64">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">Analysis Results</span>
@@ -267,18 +268,6 @@ export default function MapControls() {
         </div>
       )}
 
-      {/* Instructions hint */}
-      {currentTier === 'city' && !showSearch && (
-        <div className="absolute bottom-8 right-4 z-10">
-          <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-lg px-4 py-3 max-w-xs">
-            <p className="text-sm text-gray-600">
-              <span className="font-medium text-gray-900">Click a city</span> to explore
-              neighborhoods, or <span className="font-medium text-gray-900">search an address</span> to
-              find planting sites
-            </p>
-          </div>
-        </div>
-      )}
     </>
   )
 }

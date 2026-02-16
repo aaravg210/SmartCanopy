@@ -319,7 +319,7 @@ if __name__ == "__main__":
     detector = PlantingSiteDetector()
     
     # Test address
-    test_address = "2214 Chisin St, San Jose, CA"
+    test_address = "1065 Avenue of the Americas, New York, NY 10018"
     
     result = detector.analyze_address(test_address, buffer_m=100)
     

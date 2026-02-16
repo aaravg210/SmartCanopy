@@ -50,15 +50,6 @@ function createNeighborhoodPopupHTML({
           <span style="font-weight: 500; color: #374151;">${needScore.toFixed(0)}/100</span>
         </div>
       </div>
-      <div style="
-        margin-top: 10px;
-        padding-top: 8px;
-        border-top: 1px solid #e5e7eb;
-        font-size: 11px;
-        color: #6b7280;
-      ">
-        Click to view planting sites
-      </div>
     </div>
   `
 }
@@ -69,6 +60,7 @@ interface NeighborhoodLayerProps {
 
 export default function NeighborhoodLayer({ map }: NeighborhoodLayerProps) {
   const popup = useRef<mapboxgl.Popup | null>(null)
+  const hoveredCellId = useRef<string | null>(null)
   const {
     selectedCity,
     currentTier,
@@ -176,49 +168,58 @@ export default function NeighborhoodLayer({ map }: NeighborhoodLayerProps) {
       }
     }
 
-    // Use mousemove instead of mouseenter to track mouse position
-    const handleMouseMove = (e: mapboxgl.MapLayerMouseEvent) => {
-      map.getCanvas().style.cursor = 'pointer'
+    // Use map-level mousemove with queryRenderedFeatures so that
+    // label layers and popups can't interfere with hover detection
+    const handleMouseMove = (e: mapboxgl.MapMouseEvent) => {
+      const features = map.queryRenderedFeatures(e.point, { layers: [FILL_LAYER_ID] })
 
-      if (e.features && e.features[0]) {
-        const props = e.features[0].properties
-
-        // Remove existing popup
+      if (features.length === 0) {
+        // Cursor is not over any cell
+        map.getCanvas().style.cursor = ''
+        hoveredCellId.current = null
         if (popup.current) {
           popup.current.remove()
+          popup.current = null
         }
+        return
+      }
 
-        // Use actual mouse coordinates instead of cell center
+      map.getCanvas().style.cursor = 'pointer'
+      const props = features[0].properties
+      const cellId = props?.id || ''
+
+      // Skip if still hovering the same cell
+      if (cellId === hoveredCellId.current) return
+
+      hoveredCellId.current = cellId
+
+      // Reuse existing popup to avoid remove/recreate flicker
+      if (!popup.current) {
         popup.current = new mapboxgl.Popup({
           closeButton: false,
           closeOnClick: false,
           offset: 15,
+          className: 'no-pointer-events',
         })
-          .setLngLat(e.lngLat)
-          .setHTML(
-            createNeighborhoodPopupHTML({
-              name: props?.name || '',
-              canopyPercentage: props?.canopyPercentage || 0,
-              heatIslandIndex: props?.heatIslandIndex || 0,
-              needScore: props?.needScore || 0,
-            })
-          )
           .addTo(map)
       }
-    }
 
-    const handleMouseLeave = () => {
-      map.getCanvas().style.cursor = ''
-      if (popup.current) {
-        popup.current.remove()
-        popup.current = null
-      }
+      // Update position and content in place
+      popup.current
+        .setLngLat([props?.centerLng || 0, props?.centerLat || 0])
+        .setHTML(
+          createNeighborhoodPopupHTML({
+            name: props?.name || '',
+            canopyPercentage: props?.canopyPercentage || 0,
+            heatIslandIndex: props?.heatIslandIndex || 0,
+            needScore: props?.needScore || 0,
+          })
+        )
     }
 
     // Register event handlers
     map.on('click', FILL_LAYER_ID, handleClick)
-    map.on('mousemove', FILL_LAYER_ID, handleMouseMove)
-    map.on('mouseleave', FILL_LAYER_ID, handleMouseLeave)
+    map.on('mousemove', handleMouseMove)
 
     // Update visibility based on tier
     const isVisible = currentTier === 'neighborhood'
@@ -229,8 +230,7 @@ export default function NeighborhoodLayer({ map }: NeighborhoodLayerProps) {
     return () => {
       // Remove event handlers
       map.off('click', FILL_LAYER_ID, handleClick)
-      map.off('mousemove', FILL_LAYER_ID, handleMouseMove)
-      map.off('mouseleave', FILL_LAYER_ID, handleMouseLeave)
+      map.off('mousemove', handleMouseMove)
 
       if (popup.current) {
         popup.current.remove()
