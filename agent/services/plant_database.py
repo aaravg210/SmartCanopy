@@ -110,6 +110,13 @@ class PlantSpecies(Base):
     price_8ft = Column(Float)
     price_10ft = Column(Float)
 
+    # OCF / VTA program metadata
+    vta_approved = Column(Boolean, default=False)    # On OCF Approved Species List
+    csj_street_tree = Column(Boolean, default=False) # City of San Jose approved street tree
+    fall_color = Column(Boolean, default=False)      # Notable fall foliage
+    flowers = Column(Boolean, default=False)         # Showy flowers
+    ocf_notes = Column(Text)                         # Per-species notes from OCF
+
     # Metadata
     image_url = Column(String(500))
     description = Column(Text)

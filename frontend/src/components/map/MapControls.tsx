@@ -6,7 +6,7 @@ import { useAnalysisStore } from '@/stores/analysisStore'
 
 export default function MapControls() {
   const { currentTier, selectedCity, resetView, flyToCoordinates } = useMapStore()
-  const { analyzeAddress, isAnalyzing, error, currentAnalysis, clearAnalysis } = useAnalysisStore()
+  const { analyzeAddress, isAnalyzing, analysisProgress, error, currentAnalysis, clearAnalysis } = useAnalysisStore()
 
   const [searchAddress, setSearchAddress] = useState('')
   const [showSearch, setShowSearch] = useState(false)
@@ -16,9 +16,6 @@ export default function MapControls() {
 
     try {
       await analyzeAddress({ address: searchAddress })
-
-      // After analysis, fly to the location
-      // The coordinates come from the analysis response
       const store = useAnalysisStore.getState()
       if (store.currentAnalysis) {
         flyToCoordinates(
@@ -49,7 +46,7 @@ export default function MapControls() {
             </div>
             <div>
               <h1 className="font-semibold text-gray-900">SmartCanopy</h1>
-              <p className="text-xs text-gray-500">Urban Tree AI</p>
+              <p className="text-xs text-green-700">Powered by Our City Forest</p>
             </div>
           </div>
         </div>
@@ -185,7 +182,7 @@ export default function MapControls() {
 
             <input
               type="text"
-              placeholder="Enter address (e.g., 123 Main St, San Jose, CA)"
+              placeholder="Enter a Bay Area address (e.g., 123 Main St, San Jose, CA)"
               value={searchAddress}
               onChange={(e) => setSearchAddress(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
@@ -205,7 +202,7 @@ export default function MapControls() {
               {isAnalyzing ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full spinner" />
-                  Analyzing... (30-60s)
+                  {analysisProgress || 'Starting analysis…'}
                 </>
               ) : (
                 <>

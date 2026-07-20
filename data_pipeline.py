@@ -4,20 +4,48 @@ Fetches satellite imagery, NDVI, and terrain data from Google Earth Engine
 """
 
 import ee
+import json
+import os
 from geopy.geocoders import Nominatim
 from typing import Optional, Tuple, Dict
 import time
 
+_GEE_PROJECT = os.environ.get('GEE_PROJECT', 'urban-tree-ai')
+
+
+def _init_gee():
+    """
+    Initialize GEE, preferring a service account JSON credential for headless
+    production deployments (Oracle Cloud, Docker, etc.).
+
+    Priority:
+    1. GOOGLE_APPLICATION_CREDENTIALS_JSON env var — JSON string of a GCP
+       Service Account key with Earth Engine API access. Set this in production.
+    2. Interactive / Application Default Credentials — used for local dev after
+       running `earthengine authenticate`.
+    """
+    sa_json = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS_JSON')
+    if sa_json:
+        creds_dict = json.loads(sa_json)
+        service_email = creds_dict['client_email']
+        credentials = ee.ServiceAccountCredentials(service_email, key_data=sa_json)
+        ee.Initialize(credentials=credentials, project=_GEE_PROJECT)
+        print("✓ GEE initialized via service account")
+    else:
+        ee.Initialize(project=_GEE_PROJECT)
+        print("✓ GEE initialized via application default credentials")
+
+
 class TreeDataPipeline:
     """Handles all data fetching from Google Earth Engine"""
-    
+
     def __init__(self):
         """Initialize GEE and geocoder"""
         try:
-            ee.Initialize(project='urban-tree-ai')
-            print("✓ GEE initialized")
+            _init_gee()
         except Exception as e:
-            print("✗ GEE not initialized. Please authenticate once using the terminal.")
+            print("✗ GEE init failed. For local dev: run `earthengine authenticate`. "
+                  "For production: set GOOGLE_APPLICATION_CREDENTIALS_JSON env var.")
             raise e
         
         self.geocoder = Nominatim(user_agent="urban_tree_planner_v1")
@@ -167,27 +195,32 @@ class TreeDataPipeline:
         url = image.getThumbURL(vis_params)
         return url
     
-    def analyze_location(self, address: str, buffer_m: int = 500) -> Optional[Dict]:
+    def analyze_location(self, address: str, buffer_m: int = 500,
+                         coords=None) -> Optional[Dict]:
         """
-        Complete data fetching pipeline for a location
-        
+        Complete data fetching pipeline for a location.
+
         Args:
-            address: Street address to analyze
+            address: Street address (used for display; geocoding is skipped when coords provided)
             buffer_m: Analysis radius in meters
-            
+            coords: Optional (lat, lon) tuple from a high-quality geocoder (e.g. Mapbox).
+                    Pass this to bypass Nominatim and improve location accuracy.
+
         Returns:
             Dictionary with all data and metadata, or None if failed
         """
         print("\n" + "="*60)
         print(f"FETCHING DATA FOR: {address}")
         print("="*60 + "\n")
-        
-        # Step 1: Geocode address
-        coords = self.geocode_address(address)
-        if not coords:
-            return None
-        
-        lat, lon = coords
+
+        if coords is not None:
+            lat, lon = coords
+            print(f"✓ Using provided coordinates: ({lat}, {lon})")
+        else:
+            resolved = self.geocode_address(address)
+            if not resolved:
+                return None
+            lat, lon = resolved
         
         # Step 2: Get NAIP imagery
         naip = self.get_naip_imagery(lat, lon, buffer_m)

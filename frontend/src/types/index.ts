@@ -67,8 +67,42 @@ export interface AnalysisResponse {
 
 export interface AnalysisRequest {
   address: string
+  latitude?: number
+  longitude?: number
   buffer_m?: number
   save_images?: boolean
+}
+
+// Async job types
+export interface JobSubmitResponse {
+  job_id: string
+  status: string
+  message: string
+}
+
+export interface JobStatusResponse {
+  job_id: string
+  status: 'pending' | 'running' | 'complete' | 'error'
+  message?: string
+  result?: AnalysisResponse
+}
+
+// Species from /api/species/search
+export interface SpeciesData {
+  species_id: string
+  common_name: string
+  scientific_name: string
+  tree_type: string
+  mature_height_ft: number
+  mature_spread_ft: number
+  hardiness_zone_min: number
+  hardiness_zone_max: number
+  drought_tolerant: boolean
+  native_regions: string[] | null
+  co2_sequestration_kg_year: number
+  stormwater_interception_gal_year: number
+  air_pollution_removal_kg_year: number
+  price_6ft: number | null
 }
 
 // Chat types

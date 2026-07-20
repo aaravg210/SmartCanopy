@@ -1,70 +1,53 @@
 import { create } from 'zustand'
 import type { AnalysisResponse, PlantingSiteResponse, AnalysisRequest } from '@/types'
-import { apiClient } from '@/lib/api/client'
+import { analyzeAddressWithPolling } from '@/lib/api/cv'
 
 interface AnalysisState {
-  // Analysis data
   currentAnalysis: AnalysisResponse | null
   selectedSite: PlantingSiteResponse | null
-
-  // Loading states
   isAnalyzing: boolean
+  analysisProgress: string
   error: string | null
 
-  // Actions
   analyzeAddress: (request: AnalysisRequest) => Promise<void>
   selectSite: (site: PlantingSiteResponse | null) => void
   clearAnalysis: () => void
   setError: (error: string | null) => void
 }
 
-export const useAnalysisStore = create<AnalysisState>((set, get) => ({
-  // Initial state
+export const useAnalysisStore = create<AnalysisState>((set) => ({
   currentAnalysis: null,
   selectedSite: null,
   isAnalyzing: false,
+  analysisProgress: '',
   error: null,
 
-  // Analyze an address using the CV API
-  analyzeAddress: async (request: AnalysisRequest) => {
-    set({ isAnalyzing: true, error: null })
+  analyzeAddress: async (request) => {
+    set({ isAnalyzing: true, error: null, analysisProgress: 'Geocoding address…' })
 
     try {
-      const response = await apiClient<AnalysisResponse>('/api/cv/analyze', {
-        method: 'POST',
-        body: JSON.stringify({
-          address: request.address,
-          buffer_m: request.buffer_m || 100,
-          save_images: request.save_images !== false,
-        }),
+      const response = await analyzeAddressWithPolling(request, {
+        intervalMs: 3000,
+        timeoutMs: 180_000,
+        onProgress: (msg) => set({ analysisProgress: msg }),
       })
 
       set({
         currentAnalysis: response,
         isAnalyzing: false,
+        analysisProgress: '',
         selectedSite: null,
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Analysis failed'
-      set({
-        isAnalyzing: false,
-        error: message,
-      })
+      set({ isAnalyzing: false, analysisProgress: '', error: message })
       throw error
     }
   },
 
-  // Select a planting site
   selectSite: (site) => set({ selectedSite: site }),
 
-  // Clear current analysis
-  clearAnalysis: () =>
-    set({
-      currentAnalysis: null,
-      selectedSite: null,
-      error: null,
-    }),
+  clearAnalysis: () => set({ currentAnalysis: null, selectedSite: null, error: null }),
 
-  // Set error message
   setError: (error) => set({ error }),
 }))

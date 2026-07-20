@@ -33,7 +33,7 @@ export async function apiClient<T>(
   } catch (error) {
     // Network error - backend is likely not running
     throw new ApiError(
-      'Cannot connect to backend. Please start the API server (uvicorn api.main:app --reload)',
+      'Cannot connect to the analysis server. Please try again in a moment.',
       0
     )
   }

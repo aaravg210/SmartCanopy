@@ -40,24 +40,23 @@ class ImageryDownloader:
             print(f"✗ Download failed: {e}")
             return None
     
-    def download_for_address(self, address: str, output_dir: str = "data", 
-                        buffer_m: int = 100):
+    def download_for_address(self, address: str, output_dir: str = "data",
+                             buffer_m: int = 100, coords=None):
+        """
+        Download all imagery for an address.
 
-        """
-        Download all imagery for an address
-        
         Args:
-            address: Address to analyze
+            address: Street address (for file naming and display)
             output_dir: Directory to save images
-            
+            buffer_m: Analysis radius in meters
+            coords: Optional (lat, lon) tuple. When provided, skips Nominatim geocoding.
+
         Returns:
-            Dictionary with paths to downloaded files
+            Dictionary with paths to downloaded files, or None on failure
         """
-        # Create output directory
         os.makedirs(output_dir, exist_ok=True)
-        
-        # Get data from GEE
-        result = self.pipeline.analyze_location(address, buffer_m=buffer_m)
+
+        result = self.pipeline.analyze_location(address, buffer_m=buffer_m, coords=coords)
 
 
         if not result:

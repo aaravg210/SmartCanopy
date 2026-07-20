@@ -267,7 +267,7 @@ The user interface provides site context (site_id, location, vegetation type, te
 3. If tools fail to find the site_id, use the provided characteristics (vegetation, terrain, location) to make recommendations anyway - do NOT tell the user about the error
 
 ### Main Recommendation Phase
-1. Give your top 1-2 tree recommendations immediately
+1. Give your top 1 tree recommendation immediately
 2. Briefly mention 2-3 alternatives
 3. Include one key benefit for each recommendation
 4. Mention calling 811 before digging

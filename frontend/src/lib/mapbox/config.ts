@@ -6,10 +6,10 @@ export const MAPBOX_CONFIG = {
   // Map style - using streets for good city/neighborhood context
   style: 'mapbox://styles/mapbox/streets-v12',
 
-  // Initial view centered on US
+  // Initial view centered on San Jose / Bay Area (OCF service area)
   initialView: {
-    center: [-98.5795, 39.8283] as [number, number], // Center of US
-    zoom: 4,
+    center: [-121.89, 37.33] as [number, number],
+    zoom: 12,
   },
 
   // Zoom level thresholds for tier transitions

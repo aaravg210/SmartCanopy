@@ -6,7 +6,13 @@
       "Bash(python scripts/seed_plants.py:*)",
       "Bash(python3:*)",
       "Bash(source:*)",
-      "Bash(pytest:*)"
+      "Bash(pytest:*)",
+      "Bash(git push:*)",
+      "Bash(pip install:*)",
+      "Bash(python scripts/md_to_pdf.py:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run *)",
+      "Bash(sudo xcodebuild -license accept)"
     ]
   }
 }

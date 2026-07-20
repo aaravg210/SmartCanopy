@@ -52,23 +52,28 @@ class PlantingSiteDetector:
         self.image_downloader = ImageryDownloader()
         self.osm_filter = OSMFilter()
     
-    def analyze_address(self, address: str, buffer_m: int = 100):
+    def analyze_address(self, address: str, buffer_m: int = 100, coords=None):
         """
-        Complete analysis pipeline for an address
-        
-        Returns planting site recommendations
+        Complete analysis pipeline for an address.
+
+        Args:
+            address: Street address (used for labelling; geocoding skipped if coords provided)
+            buffer_m: Analysis radius in meters
+            coords: Optional (lat, lon) tuple from a higher-quality geocoder (e.g. Mapbox).
+                    When provided, Nominatim is bypassed entirely.
         """
-        
+
         print("\n" + "="*60)
         print(f"ANALYZING: {address}")
         print("="*60 + "\n")
-        
+
         # Step 1: Download imagery
         print("Step 1/7: Downloading satellite imagery...")
         result = self.image_downloader.download_for_address(
             address,
             output_dir="analysis_data",
-            buffer_m=buffer_m
+            buffer_m=buffer_m,
+            coords=coords,
         )
         print("image_downloader Result:",result)
         if not result:
@@ -204,12 +209,17 @@ class PlantingSiteDetector:
             slope_img = slope_img.resize((ndvi.shape[1], ndvi.shape[0]), PILImage.BILINEAR)
             slope = np.array(slope_img) / 255.0 * 30
                 
-        # IMPROVED CRITERIA
+        # Impervious surface mask: NDVI < -0.05 reliably identifies pavement,
+        # concrete, and rooftops in NAIP 4-band imagery. This catches infrastructure
+        # that OSM may not have mapped yet.
+        impervious_mask = ndvi < -0.05
+
         suitable = (
-            (ndvi > 0.15) &           # Removes things like pavement
-            (ndvi < 0.65) &           # Not dense forest
-            (slope < 15) &            # Flat enough
-            (~tree_mask)              # No existing tree
+            (ndvi > 0.15) &           # Above bare-soil threshold
+            (ndvi < 0.65) &           # Not already dense canopy
+            (slope < 15) &            # Flat enough to plant
+            (~tree_mask) &            # No existing tree detected here
+            (~impervious_mask)        # Not a road or rooftop
         )
         
         # Find contiguous regions
@@ -319,7 +329,7 @@ if __name__ == "__main__":
     detector = PlantingSiteDetector()
     
     # Test address
-    test_address = "1065 Avenue of the Americas, New York, NY 10018"
+    test_address = "2214 Chisin St, San Jose, CA 95121"
     
     result = detector.analyze_address(test_address, buffer_m=100)
     

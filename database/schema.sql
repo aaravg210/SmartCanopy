@@ -53,6 +53,13 @@ CREATE TABLE plant_species (
     price_8ft FLOAT,
     price_10ft FLOAT,
 
+    -- OCF / VTA program metadata
+    vta_approved BOOLEAN DEFAULT FALSE,    -- On OCF Approved Tree Species List
+    csj_street_tree BOOLEAN DEFAULT FALSE, -- City of San Jose approved street tree
+    fall_color BOOLEAN DEFAULT FALSE,      -- Notable fall foliage color
+    flowers BOOLEAN DEFAULT FALSE,         -- Showy ornamental flowers
+    ocf_notes TEXT,                        -- Per-species notes
+
     -- Metadata
     image_url VARCHAR(500),
     description TEXT,
