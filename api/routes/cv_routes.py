@@ -10,6 +10,7 @@ import logging
 import uuid
 import json
 import asyncio
+import threading
 from datetime import datetime
 import sys
 import os
@@ -27,8 +28,11 @@ router = APIRouter()
 
 _db_manager: Optional[DatabaseManager] = None
 _cache_service: Optional[CacheService] = None
+_detector: Optional[PlantingSiteDetector] = None
+_detector_lock = threading.Lock()
 
 JOB_TTL_SECONDS = 3600
+ANALYSIS_CACHE_TTL = 86400  # 24 hours
 
 
 # ---------------------------------------------------------------------------
@@ -93,6 +97,16 @@ class AnalysisResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def get_detector() -> PlantingSiteDetector:
+    global _detector
+    if _detector is None:
+        with _detector_lock:
+            if _detector is None:
+                logger.info("Initializing PlantingSiteDetector (one-time startup)…")
+                _detector = PlantingSiteDetector()
+    return _detector
+
 
 def get_db_manager() -> DatabaseManager:
     global _db_manager
@@ -162,7 +176,7 @@ async def _run_analysis_job(job_id: str, request: AnalysisRequest):
     await _set_job(job_id, {"status": "running", "message": "Downloading satellite imagery and running analysis…"})
 
     try:
-        detector = PlantingSiteDetector()
+        detector = get_detector()
 
         coords = None
         if request.latitude is not None and request.longitude is not None:
@@ -195,6 +209,7 @@ async def _run_analysis_job(job_id: str, request: AnalysisRequest):
 
         db_manager = get_db_manager()
         site_responses = []
+        site_records = []
         osm_data = result.get("osm_data", {})
         has_nearby_roads = bool(osm_data.get("roads") and len(osm_data["roads"]) > 0)
         has_nearby_buildings = bool(osm_data.get("buildings") and len(osm_data["buildings"]) > 0)
@@ -206,7 +221,7 @@ async def _run_analysis_job(job_id: str, request: AnalysisRequest):
             area_sq_ft = int(site_data["area_pixels"] * sq_feet_per_pixel)
             location_pixels = site_data["location"]
 
-            site_record = PlantingSite(
+            site_records.append(PlantingSite(
                 site_id=site_id,
                 analysis_id=analysis_id,
                 address=result["address"],
@@ -221,11 +236,7 @@ async def _run_analysis_job(job_id: str, request: AnalysisRequest):
                 rgb_image_path=imagery.get("rgb_path"),
                 ndvi_image_path=imagery.get("ndvi_path"),
                 slope_image_path=imagery.get("slope_path"),
-            )
-
-            async with db_manager.get_session() as session:
-                session.add(site_record)
-                await session.commit()
+            ))
 
             site_responses.append({
                 "site_id": site_id,
@@ -240,6 +251,10 @@ async def _run_analysis_job(job_id: str, request: AnalysisRequest):
                 "has_nearby_roads": has_nearby_roads,
                 "has_nearby_buildings": has_nearby_buildings,
             })
+
+        async with db_manager.get_session() as session:
+            session.add_all(site_records)
+            await session.commit()
 
         trees = [
             {
@@ -262,6 +277,13 @@ async def _run_analysis_job(job_id: str, request: AnalysisRequest):
             "imagery_saved": request.save_images,
             "timestamp": datetime.utcnow().isoformat(),
         }
+
+        # Cache result by location so the same address returns instantly next time
+        if request.latitude is not None and request.longitude is not None:
+            cache = await get_cache()
+            if cache:
+                cache_key = f"analysis:{request.latitude:.4f}:{request.longitude:.4f}"
+                await cache.set(cache_key, json.dumps(final), ttl=ANALYSIS_CACHE_TTL)
 
         await _set_job(job_id, {"status": "complete", "message": f"Found {len(site_responses)} planting sites.", "result": final})
         logger.info(f"[job {job_id}] complete — {len(site_responses)} sites stored")
@@ -286,6 +308,17 @@ async def analyze_address(request: AnalysisRequest, background_tasks: Background
     Pass `latitude`/`longitude` from a Mapbox geocoding call to get accurate
     results — this bypasses the Nominatim fallback geocoder.
     """
+    # Return cached result instantly if this location was analyzed within 24 hours
+    if request.latitude is not None and request.longitude is not None:
+        cache = await get_cache()
+        if cache:
+            cache_key = f"analysis:{request.latitude:.4f}:{request.longitude:.4f}"
+            cached = await cache.get(cache_key)
+            if cached:
+                job_id = str(uuid.uuid4())
+                await _set_job(job_id, {"status": "complete", "message": "Served from cache.", "result": json.loads(cached)})
+                return JobSubmitResponse(job_id=job_id, status="complete", message="Results loaded from cache.")
+
     job_id = str(uuid.uuid4())
     await _set_job(job_id, {"status": "pending", "message": "Queued"})
     background_tasks.add_task(_run_analysis_job, job_id, request)

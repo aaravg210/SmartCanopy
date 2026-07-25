@@ -10,6 +10,7 @@ from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 from osm_filter import OSMFilter
+from concurrent.futures import ThreadPoolExecutor
 
 
 def pixel_to_latlon(px: float, py: float, center_lat: float, center_lon: float,
@@ -80,21 +81,27 @@ class PlantingSiteDetector:
             print("✗ Failed to download imagery")
             return None
         
-        # Step 2: Detect existing trees
-        print("\nStep 2/7: Detecting existing trees...")
-        tree_predictions = self.tree_detector.predict_trees(result['rgb_path'])
-        
-        # Step 3: Load and process 
-        # NDVI
-        print("\nStep 3/7: Analyzing vegetation coverage...")
-        ndvi_img = np.array(Image.open(result['ndvi_path']).convert('L'))  # Grayscale
-        ndvi_normalized = ndvi_img / 255.0  # Scale to 0-1
-        
-        # Step 4: Load and process slope
-        print("\nStep 4/7: Analyzing terrain...")
-        slope_img = np.array(Image.open(result['slope_path']).convert('L'))
-        slope_normalized = slope_img / 255.0 * 30  # Scale to 0-30 degrees
-        
+        # Steps 2–4 and 6: run DeepForest + OSM in parallel; load NDVI/slope on main thread
+        print("\nStep 2/7: Detecting trees and fetching OSM data (parallel)...")
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            tree_future = executor.submit(self.tree_detector.predict_trees, result['rgb_path'])
+            osm_future = executor.submit(
+                self.osm_filter.get_infrastructure_data,
+                result['coordinates'][0], result['coordinates'][1], buffer_m
+            )
+
+            # Load NDVI and slope images while both background tasks run
+            print("\nStep 3/7: Analyzing vegetation coverage...")
+            ndvi_img = np.array(Image.open(result['ndvi_path']).convert('L'))
+            ndvi_normalized = ndvi_img / 255.0
+
+            print("\nStep 4/7: Analyzing terrain...")
+            slope_img = np.array(Image.open(result['slope_path']).convert('L'))
+            slope_normalized = slope_img / 255.0 * 30
+
+            tree_predictions = tree_future.result()
+            osm_data = osm_future.result()
+
         # Step 5: Identify planting sites
         print("\nStep 5/7: Identifying planting opportunities...")
         planting_sites = self.find_planting_sites(
@@ -103,15 +110,8 @@ class PlantingSiteDetector:
             slope_normalized,
             result['rgb_path']
         )
-        # NEW Step 6: Get OSM data (osm stuff)
-        print("\nStep 6/7: Fetching OpenStreetMap data...")
-        osm_data = self.osm_filter.get_infrastructure_data(
-            result['coordinates'][0],  # lat
-            result['coordinates'][1],  # lon
-            buffer_m=buffer_m
-        )
     
-        # NEW Step 7: Create exclusion mask (osm stuff) 
+        # Step 7: Create exclusion mask
         print("\nStep 7/7: Applying infrastructure filters...")
         img = Image.open(result['rgb_path'])
         exclusion_mask = self.osm_filter.create_exclusion_mask(

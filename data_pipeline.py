@@ -8,7 +8,7 @@ import json
 import os
 from geopy.geocoders import Nominatim
 from typing import Optional, Tuple, Dict
-import time
+from concurrent.futures import ThreadPoolExecutor
 
 _GEE_PROJECT = os.environ.get('GEE_PROJECT', 'urban-tree-ai')
 
@@ -100,15 +100,8 @@ class TreeDataPipeline:
             .first()
         
         if naip:
-            # Clip to region
             naip = naip.clip(region)
-            
-            # Get image info
-            info = naip.getInfo()
-            date = info['properties']['system:time_start']
-            date_str = time.strftime('%Y-%m-%d', time.localtime(date/1000))
-            
-            print(f"✓ NAIP imagery found (date: {date_str})")
+            print("✓ NAIP imagery found")
             return naip
         else:
             print("✗ No NAIP imagery found for this location")
@@ -238,25 +231,19 @@ class TreeDataPipeline:
         point = ee.Geometry.Point([lon, lat])
         region = point.buffer(buffer_m).bounds()
         
-        # Step 6: Generate visualization URLs
+        # Step 6: Generate visualization URLs (both GEE requests in parallel)
         print("\nGenerating visualization URLs...")
-        
-        rgb_url = self.get_image_url(
-            naip_with_ndvi, 
-            region, 
-            bands=['R', 'G', 'B'],
-            min_val=0,
-            max_val=255
-        )
-        
-        ndvi_url = self.get_image_url(
-            naip_with_ndvi,
-            region,
-            bands=['NDVI'],
-            min_val=-1,
-            max_val=1
-        )
-        
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            rgb_future = executor.submit(
+                self.get_image_url, naip_with_ndvi, region, ['R', 'G', 'B'], 0, 255
+            )
+            ndvi_future = executor.submit(
+                self.get_image_url, naip_with_ndvi, region, ['NDVI'], -1, 1
+            )
+            rgb_url = rgb_future.result()
+            ndvi_url = ndvi_future.result()
+
         print("✓ Visualization URLs generated")
         
         # Step 7: Package everything
