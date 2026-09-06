@@ -8,9 +8,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install CPU-only PyTorch first (keeps image ~1.5GB smaller than default)
-RUN pip install --no-cache-dir \
-    torch==2.6.0+cpu torchvision==0.21.0+cpu \
+# torch and torchvision are installed separately because torchvision 0.21.0
+# does not have a +cpu wheel — only the plain build is available on ARM.
+RUN pip install --no-cache-dir torch==2.6.0+cpu \
     --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir torchvision==0.21.0
 
 COPY requirements.txt .
 # Skip the torch lines already installed above; install everything else
