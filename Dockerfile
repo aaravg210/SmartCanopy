@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install CPU-only PyTorch first (keeps image ~1.5GB smaller than default)
 RUN pip install --no-cache-dir \
-    torch==2.4.0+cpu torchvision==0.19.0+cpu \
+    torch==2.6.0+cpu torchvision==0.21.0+cpu \
     --index-url https://download.pytorch.org/whl/cpu
 
 COPY requirements.txt .
