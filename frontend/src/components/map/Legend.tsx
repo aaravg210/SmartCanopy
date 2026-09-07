@@ -81,13 +81,6 @@ export default function Legend() {
               />
               <span className="text-xs text-gray-600">Recommended Site</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="w-4 h-4 rounded-full"
-                style={{ backgroundColor: SITE_COLORS.existing }}
-              />
-              <span className="text-xs text-gray-600">Existing Tree</span>
-            </div>
           </div>
           <div className="mt-2 pt-2 border-t">
             <p className="text-xs text-gray-600">

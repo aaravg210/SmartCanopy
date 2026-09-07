@@ -278,7 +278,16 @@ export default function StreetLayer({ map }: StreetLayerProps) {
       }
     }
 
+    // Dismiss click popup when clicking anywhere on the map outside a site
+    const handleMapClick = () => {
+      if (clickPopup.current) {
+        clickPopup.current.remove()
+        clickPopup.current = null
+      }
+    }
+
     // Register event handlers
+    map.on('click', handleMapClick)
     map.on('click', SITES_LAYER_ID, handleSitesClick)
     map.on('mouseenter', SITES_LAYER_ID, handleSitesMouseEnter)
     map.on('mouseleave', SITES_LAYER_ID, handleSitesMouseLeave)
@@ -297,6 +306,7 @@ export default function StreetLayer({ map }: StreetLayerProps) {
 
     return () => {
       // Remove event handlers
+      map.off('click', handleMapClick)
       map.off('click', SITES_LAYER_ID, handleSitesClick)
       map.off('mouseenter', SITES_LAYER_ID, handleSitesMouseEnter)
       map.off('mouseleave', SITES_LAYER_ID, handleSitesMouseLeave)

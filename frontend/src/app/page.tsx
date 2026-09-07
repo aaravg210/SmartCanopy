@@ -17,12 +17,8 @@ export default function Home() {
       {/* Hero */}
       <section className="flex-1 flex flex-col items-center justify-center text-center px-6 py-20">
         <div className="max-w-xl">
-          <span className="inline-block text-xs font-semibold uppercase tracking-widest text-green-700 bg-green-100 px-3 py-1 rounded-full mb-6">
-            Bay Area Free Tree Program
-          </span>
-
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight mb-5">
-            Explore the trees around you — and find the perfect spot for a <span className="text-green-600">free one</span>
+            Explore the trees around you — and find the <span className="text-green-600">perfect one</span> for your street
           </h2>
 
           <p className="text-lg text-gray-600 mb-8">
@@ -66,8 +62,8 @@ export default function Home() {
               {
                 step: '3',
                 icon: '🌳',
-                title: 'Get a free tree',
-                desc: "Select a site, choose a species from OCF's approved list, and request free planting — Our City Forest does the rest.",
+                title: 'Get a tree',
+                desc: "Select a site, choose a species from OCF's approved list, and request a tree.",
               },
             ].map(({ step, icon, title, desc }) => (
               <div key={step} className="text-center">

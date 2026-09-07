@@ -138,7 +138,7 @@ export default function MapControls() {
         {/* Click-hint pill — shown after analysis until user clicks a site */}
         {showClickHint && (
           <div className="mt-2 flex justify-center">
-            <span className="bg-blue-600 text-white text-xs font-medium px-4 py-1.5 rounded-full shadow-md">
+            <span className="bg-blue-600 text-white text-sm font-semibold px-5 py-2 rounded-full shadow-md">
               Click a blue planting site to see species &amp; benefits
             </span>
           </div>
@@ -148,7 +148,7 @@ export default function MapControls() {
       {/* Search / Analyze Address */}
       <div className="absolute top-[5.5rem] left-4 z-10">
         {!showSearch ? (
-          <div>
+          <div className="flex items-center gap-2">
             <button
               onClick={() => { setShowSearch(true); setShowOnboarding(false) }}
               className="bg-white rounded-lg shadow-lg px-4 py-2.5 flex items-center gap-2 hover:bg-gray-50 transition-colors"
@@ -159,12 +159,11 @@ export default function MapControls() {
               <span className="text-sm text-gray-600">Analyze an address...</span>
             </button>
             {showOnboarding && !currentAnalysis && (
-              <div className="mt-2 flex flex-col items-start gap-1 pointer-events-none">
-                <svg className="w-5 h-5 text-blue-600 animate-bounce ml-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 4l-8 8h5v8h6v-8h5z" />
-                </svg>
-                <span className="bg-blue-600 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-md ml-1">
-                  Start here — analyze any Bay Area address
+              <div className="flex items-center gap-0 pointer-events-none">
+                {/* Left-pointing triangle tip */}
+                <div className="w-0 h-0 border-t-[7px] border-t-transparent border-b-[7px] border-b-transparent border-r-[9px] border-r-blue-600" />
+                <span className="bg-blue-600 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-md whitespace-nowrap">
+                  Start here — analyze any address
                 </span>
               </div>
             )}

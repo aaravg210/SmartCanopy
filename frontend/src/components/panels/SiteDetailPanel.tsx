@@ -265,7 +265,7 @@ function SpeciesCard({ species: sp, selected, bestPick, onSelect }: { species: S
     >
       {bestPick && (
         <div className="flex items-center gap-1.5 mb-2">
-          <span className="bg-green-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">⭐ Best Pick for this site</span>
+          <span className="bg-green-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">Great Pick</span>
         </div>
       )}
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -283,7 +283,7 @@ function SpeciesCard({ species: sp, selected, bestPick, onSelect }: { species: S
         <span>Height: {sp.mature_height_ft} ft</span>
         <span>Spread: {sp.mature_spread_ft} ft</span>
         <span>CO₂: {sp.co2_sequestration_kg_year} kg/yr</span>
-        <span>Water: {sp.stormwater_interception_gal_year.toFixed(0)} gal/yr</span>
+        <span>Stormwater captured: {sp.stormwater_interception_gal_year.toFixed(0)} gal/yr</span>
       </div>
 
       <a
@@ -440,12 +440,28 @@ function BenefitCard({
 function GetTreeTab({ diyOpen, onToggleDiy }: { diyOpen: boolean; onToggleDiy: () => void }) {
   return (
     <div className="p-5 space-y-5">
+      {/* Grant zone check — first step before requesting */}
+      <div className="rounded-lg bg-amber-50 border border-amber-200 p-4">
+        <p className="font-medium text-amber-800 text-sm mb-1">Are you in the grant zone?</p>
+        <p className="text-amber-700 text-xs mb-2">
+          OCF&apos;s planting service is available to addresses in their VTA-supported grant zone. Check the map on their website before requesting.
+        </p>
+        <a
+          href={OCF_FREE_TREES_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-amber-700 underline font-medium"
+        >
+          Check your eligibility on OCF&apos;s website →
+        </a>
+      </div>
+
       {/* Primary CTA */}
       <div className="rounded-xl bg-green-600 text-white p-5 text-center">
         <div className="text-3xl mb-2">🌳</div>
-        <h3 className="font-semibold text-lg mb-1">Our City Forest plants it for you</h3>
+        <h3 className="font-semibold text-lg mb-1">Our City Forest could potentially plant it for you</h3>
         <p className="text-green-100 text-sm mb-4">
-          The most popular option — OCF&apos;s team plants your free tree at no cost to you.
+          If you&apos;re in the grant zone, OCF may be able to plant a tree at your chosen site — visit their website to learn more and request.
         </p>
         <a
           href={OCF_FREE_TREES_URL}
@@ -453,23 +469,7 @@ function GetTreeTab({ diyOpen, onToggleDiy }: { diyOpen: boolean; onToggleDiy: (
           rel="noopener noreferrer"
           className="block w-full py-3 rounded-lg bg-white text-green-700 font-semibold text-sm hover:bg-green-50 transition-colors"
         >
-          Request Free Tree Planting →
-        </a>
-      </div>
-
-      {/* Grant zone note */}
-      <div className="rounded-lg bg-amber-50 border border-amber-200 p-4">
-        <p className="font-medium text-amber-800 text-sm mb-1">Are you in the grant zone?</p>
-        <p className="text-amber-700 text-xs mb-2">
-          OCF&apos;s free planting service is available to addresses in their VTA-supported grant zone (shown on their website map).
-        </p>
-        <a
-          href={OCF_GRANT_ZONE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-amber-700 underline font-medium"
-        >
-          Check your eligibility on OCF&apos;s website →
+          Request Tree Planting on OCF&apos;s Website →
         </a>
       </div>
 
