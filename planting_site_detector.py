@@ -132,8 +132,10 @@ class PlantingSiteDetector:
         # Generate report
         self.generate_report(address, tree_predictions, filtered_sites)
 
-        # Get image dimensions and center coordinates for coordinate conversion
-        img = Image.open(result['rgb_path'])
+        # Get image dimensions from the NDVI image — planting site pixel
+        # centroids are computed in NDVI array space, so use NDVI dimensions
+        # for lat/lon conversion to avoid coordinate drift on non-square images.
+        img = Image.open(result['ndvi_path'])
         img_width, img_height = img.size
         center_lat = result['coordinates'][0]
         center_lon = result['coordinates'][1]

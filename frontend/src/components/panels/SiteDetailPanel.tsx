@@ -99,10 +99,6 @@ export default function SiteDetailPanel({ site, analysisAddress }: SiteDetailPan
 
         <div className="flex gap-3 mt-3 text-xs text-gray-500">
           <span>NDVI {site.avg_ndvi.toFixed(2)}</span>
-          <span>·</span>
-          <span>Slope {site.avg_slope.toFixed(1)}°</span>
-          <span>·</span>
-          <span>{site.area_sq_ft.toLocaleString()} sq ft</span>
         </div>
 
         {(site.has_nearby_roads || site.has_nearby_buildings) && (
@@ -188,6 +184,7 @@ function SpeciesTab({
 }) {
   return (
     <div className="p-4">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Filters</p>
       <div className="flex gap-2 mb-4">
         <FilterChip active={nativeOnly} onClick={onToggleNative} label="CA Native" />
         <FilterChip active={droughtOnly} onClick={onToggleDrought} label="Drought Tolerant" />
@@ -216,7 +213,7 @@ function SpeciesTab({
       </div>
 
       {!loading && species.length > 0 && (
-        <p className="text-xs text-gray-400 mt-4 text-center">
+        <p className="text-sm text-gray-700 mt-4 text-center">
           Species availability subject to change — confirm with Our City Forest before visiting.
         </p>
       )}
@@ -256,7 +253,7 @@ function SpeciesCard({ species: sp, selected, onSelect }: { species: SpeciesData
         </div>
         <div className="flex gap-1 shrink-0 flex-wrap justify-end">
           {isNative && <Badge text="CA Native" color="green" />}
-          {sp.drought_tolerant && <Badge text="Drought OK" color="amber" />}
+          {sp.drought_tolerant && <Badge text="Drought OK" color="blue" />}
         </div>
       </div>
 
@@ -274,14 +271,14 @@ function SpeciesCard({ species: sp, selected, onSelect }: { species: SpeciesData
         onClick={(e) => e.stopPropagation()}
         className="block w-full text-center py-2 rounded-md bg-green-600 hover:bg-green-700 text-white text-xs font-medium transition-colors"
       >
-        Get this tree free from Our City Forest →
+        Check if you can get this tree from Our City Forest →
       </a>
     </div>
   )
 }
 
-function Badge({ text, color }: { text: string; color: 'green' | 'amber' }) {
-  const cls = color === 'green' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+function Badge({ text, color }: { text: string; color: 'green' | 'blue' | 'amber' }) {
+  const cls = color === 'green' ? 'bg-green-100 text-green-700' : color === 'blue' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
   return <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${cls}`}>{text}</span>
 }
 
@@ -309,7 +306,8 @@ function BenefitsTab({
   const co2Total = selectedSpecies.co2_sequestration_kg_year * projectionYears
   const stormTotal = selectedSpecies.stormwater_interception_gal_year * projectionYears
   const airTotal = selectedSpecies.air_pollution_removal_kg_year * projectionYears
-  const carMiles = Math.round(co2Total / 0.21)
+  // A car emits ~12.6 kg CO₂/day; a washing machine uses ~20 gal/load
+  const carDays = Math.round(co2Total / 12.6)
   const laundryLoads = Math.round(stormTotal / 20)
 
   return (
@@ -357,7 +355,7 @@ function BenefitsTab({
           label="CO₂ Absorbed"
           value={`${co2Total.toLocaleString(undefined, { maximumFractionDigits: 0 })} kg`}
           sub={`${selectedSpecies.co2_sequestration_kg_year} kg per year`}
-          equiv={`≈ ${carMiles.toLocaleString()} miles of car emissions offset`}
+          equiv={`That's like taking a car off the road for ${carDays.toLocaleString()} day${carDays !== 1 ? 's' : ''}`}
           color="green"
         />
         <BenefitCard
@@ -365,7 +363,7 @@ function BenefitsTab({
           label="Stormwater Intercepted"
           value={`${stormTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })} gal`}
           sub={`${selectedSpecies.stormwater_interception_gal_year.toFixed(0)} gal per year`}
-          equiv={`≈ ${laundryLoads.toLocaleString()} loads of laundry worth of water`}
+          equiv={`Enough to fill ${laundryLoads.toLocaleString()} washing machine loads`}
           color="blue"
         />
         <BenefitCard
@@ -408,7 +406,7 @@ function BenefitCard({
       </div>
       <p className={`text-2xl font-bold ${styles.val}`}>{value}</p>
       <p className="text-xs text-gray-500 mt-0.5">{sub}</p>
-      {equiv && <p className="text-xs text-gray-400 mt-1 italic">{equiv}</p>}
+      {equiv && <p className="text-sm text-gray-700 mt-1 font-medium">{equiv}</p>}
     </div>
   )
 }
@@ -488,7 +486,7 @@ function GetTreeTab({ diyOpen, onToggleDiy }: { diyOpen: boolean; onToggleDiy: (
         )}
       </div>
 
-      <p className="text-xs text-gray-400 text-center">
+      <p className="text-sm text-gray-700 text-center">
         SmartCanopy is an independent tool supporting urban forestry in the Bay Area.
         Species availability is subject to change — visit Our City Forest to confirm.
       </p>

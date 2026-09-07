@@ -13,7 +13,7 @@ export default function SidePanel() {
   }
 
   return (
-    <div className="absolute top-0 right-0 h-full w-96 bg-white shadow-2xl z-20 flex flex-col overflow-hidden">
+    <div className="absolute top-0 right-0 h-full w-[480px] bg-white shadow-2xl z-20 flex flex-col overflow-hidden">
       {/* Close button */}
       <button
         onClick={() => selectSite(null)}

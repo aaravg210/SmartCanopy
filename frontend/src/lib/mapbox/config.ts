@@ -3,13 +3,13 @@
  */
 
 export const MAPBOX_CONFIG = {
-  // Map style - using streets for good city/neighborhood context
-  style: 'mapbox://styles/mapbox/streets-v12',
+  // Map style - satellite with street labels for context
+  style: 'mapbox://styles/mapbox/satellite-streets-v12',
 
-  // Initial view centered on San Jose / Bay Area (OCF service area)
+  // Initial view showing full Bay Area — Bay, hills, and OCF service area
   initialView: {
-    center: [-121.89, 37.33] as [number, number],
-    zoom: 12,
+    center: [-122.05, 37.45] as [number, number],
+    zoom: 10,
   },
 
   // Zoom level thresholds for tier transitions

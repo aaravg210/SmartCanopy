@@ -11,10 +11,7 @@ export default function Home() {
             <rect x="10.5" y="21" width="3" height="3" rx="0.5" />
           </svg>
         </div>
-        <div>
-          <h1 className="font-semibold text-gray-900 leading-tight">SmartCanopy</h1>
-          <p className="text-xs text-green-700">Powered by Our City Forest</p>
-        </div>
+        <h1 className="font-semibold text-gray-900 leading-tight">SmartCanopy</h1>
       </header>
 
       {/* Hero */}
@@ -25,12 +22,11 @@ export default function Home() {
           </span>
 
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight mb-5">
-            Find the perfect spot for a <span className="text-green-600">free tree</span> on your street
+            Explore the trees around you — and find the perfect spot for a <span className="text-green-600">free one</span>
           </h2>
 
           <p className="text-lg text-gray-600 mb-8">
-            Enter your address and SmartCanopy uses satellite imagery to identify ideal
-            planting locations — then Our City Forest plants a free tree there for you.
+            Enter your address to discover nearby planting opportunities, learn about local tree species and their environmental benefits — then request a free tree from Our City Forest.
           </p>
 
           <Link
@@ -59,7 +55,7 @@ export default function Home() {
                 step: '1',
                 icon: '📍',
                 title: 'Enter your address',
-                desc: 'Type any Bay Area address. We analyze a 100m radius using NAIP satellite imagery.',
+                desc: 'Type any Bay Area address. We analyze the area around it using NAIP satellite imagery.',
               },
               {
                 step: '2',

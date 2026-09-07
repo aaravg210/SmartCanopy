@@ -55,7 +55,7 @@ export async function submitAnalysis(request: AnalysisRequest): Promise<JobSubmi
       address: request.address,
       latitude: request.latitude,
       longitude: request.longitude,
-      buffer_m: request.buffer_m ?? 100,
+      buffer_m: request.buffer_m ?? 50,
       save_images: request.save_images !== false,
     }),
   })
