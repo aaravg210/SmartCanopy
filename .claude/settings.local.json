@@ -12,7 +12,9 @@
       "Bash(python scripts/md_to_pdf.py:*)",
       "Bash(npx tsc:*)",
       "Bash(npm run *)",
-      "Bash(sudo xcodebuild -license accept)"
+      "Bash(sudo xcodebuild -license accept)",
+      "Bash(git --version)",
+      "Bash(git fetch *)"
     ]
   }
 }
