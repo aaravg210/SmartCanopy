@@ -215,8 +215,10 @@ async def _run_analysis_job(job_id: str, request: AnalysisRequest):
         site_responses = []
         site_records = []
         osm_data = result.get("osm_data", {})
-        has_nearby_roads = bool(osm_data.get("roads") and len(osm_data["roads"]) > 0)
-        has_nearby_buildings = bool(osm_data.get("buildings") and len(osm_data["buildings"]) > 0)
+        _roads = osm_data.get("roads")
+        _buildings = osm_data.get("buildings")
+        has_nearby_roads = _roads is not None and len(_roads) > 0
+        has_nearby_buildings = _buildings is not None and len(_buildings) > 0
 
         for site_data in result["planting_sites"]:
             site_id = str(uuid.uuid4())
