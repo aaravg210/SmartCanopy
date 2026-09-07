@@ -14,7 +14,10 @@ class DeepForestDetector:
         """Initialize and load DeepForest model"""
         print("Loading DeepForest model...")
         self.model = main.deepforest()
-        self.model.use_release()  # Load pre-trained weights
+        try:
+            self.model.use_release()  # deepforest < 2.0
+        except AttributeError:
+            self.model.load_model("weecology/deepforest-tree")  # deepforest >= 2.0
         print("✓ Model loaded!\n")
     
     def predict_trees(self, image_path: str, confidence_threshold: float = 0.3):
