@@ -36,21 +36,37 @@ export default function SiteDetailPanel({ site, analysisAddress }: SiteDetailPan
   }
   const colors = priorityColors[priorityLevel]
 
+  // Derive max tree height from site area: small sites need smaller trees
+  const maxHeightFt = site.area_sq_ft < 400 ? 25 : site.area_sq_ft < 900 ? 35 : 50
+
+  // Rank species by fit for this specific site
+  const rankForSite = (sp: SpeciesData): number => {
+    const heightScore = Math.max(0, 1 - sp.mature_height_ft / maxHeightFt)
+    const droughtScore = sp.drought_tolerant ? 0.3 : 0
+    const nativeScore = sp.native_regions?.includes('california') ? 0.2 : 0
+    const roadScore = site.has_nearby_roads && sp.mature_spread_ft < 25 ? 0.2 : 0
+    return heightScore * 0.3 + droughtScore + nativeScore + roadScore
+  }
+
   useEffect(() => {
     let cancelled = false
     setSpeciesLoading(true)
     setSpeciesError(null)
+    setSelectedSpecies(null)
 
     fetchSpecies({
       hardiness_zone: 10,
       native_only: nativeOnly,
       drought_tolerant: droughtOnly || undefined,
+      max_height_ft: maxHeightFt,
       limit: 20,
     })
       .then((data) => {
         if (cancelled) return
-        setSpecies(data)
-        if (!selectedSpecies && data.length > 0) setSelectedSpecies(data[0])
+        // Sort by site-specific fit score so the best-fit species appears first
+        const ranked = [...data].sort((a, b) => rankForSite(b) - rankForSite(a))
+        setSpecies(ranked)
+        if (ranked.length > 0) setSelectedSpecies(ranked[0])
       })
       .catch(() => {
         if (!cancelled) setSpeciesError('Could not load species — is the API running?')
@@ -61,7 +77,7 @@ export default function SiteDetailPanel({ site, analysisAddress }: SiteDetailPan
 
     return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nativeOnly, droughtOnly])
+  }, [nativeOnly, droughtOnly, site.site_id])
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'species', label: 'Recommended Species' },
@@ -118,7 +134,7 @@ export default function SiteDetailPanel({ site, analysisAddress }: SiteDetailPan
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-2.5 px-1 font-medium transition-colors text-center leading-tight text-xs ${
+            className={`flex-1 py-4 px-1 font-bold transition-colors text-center leading-tight text-xs ${
               activeTab === tab.id
                 ? 'text-green-700 border-b-2 border-green-600'
                 : 'text-gray-500 hover:text-gray-700'
@@ -202,11 +218,12 @@ function SpeciesTab({
       )}
 
       <div className="space-y-3">
-        {species.map((sp) => (
+        {species.map((sp, idx) => (
           <SpeciesCard
             key={sp.species_id}
             species={sp}
             selected={selectedSpecies?.species_id === sp.species_id}
+            bestPick={idx === 0}
             onSelect={() => onSelectSpecies(sp)}
           />
         ))}
@@ -236,7 +253,7 @@ function FilterChip({ active, onClick, label }: { active: boolean; onClick: () =
   )
 }
 
-function SpeciesCard({ species: sp, selected, onSelect }: { species: SpeciesData; selected: boolean; onSelect: () => void }) {
+function SpeciesCard({ species: sp, selected, bestPick, onSelect }: { species: SpeciesData; selected: boolean; bestPick: boolean; onSelect: () => void }) {
   const isNative = sp.native_regions?.includes('california')
 
   return (
@@ -246,6 +263,11 @@ function SpeciesCard({ species: sp, selected, onSelect }: { species: SpeciesData
         selected ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-green-300 bg-white'
       }`}
     >
+      {bestPick && (
+        <div className="flex items-center gap-1.5 mb-2">
+          <span className="bg-green-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">⭐ Best Pick for this site</span>
+        </div>
+      )}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0">
           <p className="font-medium text-gray-900 text-sm">{sp.common_name}</p>

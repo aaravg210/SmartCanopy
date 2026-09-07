@@ -13,9 +13,9 @@ import rasterio
 from rasterio import features
 
 # Clearance distances (meters) — planted trees must not be closer than these
-BUFFER_ROAD_M = 8       # roads (was 3m; raised for root/utility clearance)
-BUFFER_BUILDING_M = 5   # buildings
-BUFFER_PARKING_M = 5    # parking lots
+BUFFER_ROAD_M = 3       # roads
+BUFFER_BUILDING_M = 2   # buildings
+BUFFER_PARKING_M = 2    # parking lots
 
 # A site is rejected if ANY excluded pixel falls within this radius of its centre (pixels).
 # Set to 0 to reject only when the exact centre pixel is excluded.

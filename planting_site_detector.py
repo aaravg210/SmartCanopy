@@ -117,8 +117,12 @@ class PlantingSiteDetector:
         filtered_sites = self.osm_filter.filter_planting_sites(
             planting_sites,
             exclusion_mask
-    
         )
+
+        # Fallback: if OSM filtering removed every site, use top 2 raw candidates
+        if not filtered_sites and planting_sites:
+            filtered_sites = planting_sites[:2]
+            print("⚠ OSM filter removed all sites — using top 2 unfiltered candidates as fallback")
         
         # Generate report
         self.generate_report(address, None, filtered_sites)

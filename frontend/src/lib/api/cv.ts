@@ -132,6 +132,7 @@ export async function fetchSpecies(params: {
   hardiness_zone?: number
   native_only?: boolean
   drought_tolerant?: boolean
+  max_height_ft?: number
   limit?: number
 } = {}): Promise<SpeciesData[]> {
   const qs = new URLSearchParams()
@@ -139,5 +140,6 @@ export async function fetchSpecies(params: {
   qs.set('limit', String(params.limit ?? 30))
   if (params.native_only) qs.set('native_only', 'true')
   if (params.drought_tolerant !== undefined) qs.set('drought_tolerant', String(params.drought_tolerant))
+  if (params.max_height_ft !== undefined) qs.set('max_height_ft', String(params.max_height_ft))
   return apiClient<SpeciesData[]>(`/api/species/search?${qs.toString()}`)
 }
