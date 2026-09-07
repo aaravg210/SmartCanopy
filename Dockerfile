@@ -37,14 +37,7 @@ COPY . .
 
 # DeepForest downloads weights on first run; pre-warm the cache at build time
 # so production containers start instantly. Skip if bandwidth is a concern.
-RUN python -c "
-from deepforest import main
-m = main.deepforest()
-try:
-    m.use_release()
-except AttributeError:
-    m.load_model('weecology/deepforest-tree')
-" || true
+RUN python -c "from deepforest import main; m = main.deepforest(); getattr(m, 'use_release', lambda: m.load_model('weecology/deepforest-tree'))()" || true
 
 EXPOSE 8000
 
