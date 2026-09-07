@@ -132,18 +132,22 @@ _memory_jobs: Dict[str, dict] = {}
 
 
 async def _set_job(job_id: str, payload: dict):
+    _memory_jobs[job_id] = payload  # always write to memory
     cache = await get_cache()
     if cache:
         await cache.set(f"job:{job_id}", json.dumps(payload), ttl=JOB_TTL_SECONDS)
-    else:
-        _memory_jobs[job_id] = payload
 
 
 async def _get_job(job_id: str) -> Optional[dict]:
+    # Try Redis first, fall back to memory
     cache = await get_cache()
     if cache:
-        raw = await cache.get(f"job:{job_id}")
-        return json.loads(raw) if raw else None
+        try:
+            raw = await cache.get(f"job:{job_id}")
+            if raw:
+                return json.loads(raw) if isinstance(raw, str) else raw
+        except Exception:
+            pass
     return _memory_jobs.get(job_id)
 
 
