@@ -79,10 +79,10 @@ export default function SiteDetailPanel({ site, analysisAddress }: SiteDetailPan
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nativeOnly, droughtOnly, site.site_id])
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'species', label: 'Recommended Species' },
-    { id: 'benefits', label: 'Environmental Benefits' },
-    { id: 'get-tree', label: 'Get Your Tree' },
+  const tabs: { id: Tab; icon: string; top: string; bottom: string }[] = [
+    { id: 'species', icon: '🌿', top: 'Recommended', bottom: 'Species' },
+    { id: 'benefits', icon: '📊', top: 'Environmental', bottom: 'Benefits' },
+    { id: 'get-tree', icon: '🌳', top: 'Get Your', bottom: 'Tree' },
   ]
 
   return (
@@ -129,18 +129,20 @@ export default function SiteDetailPanel({ site, analysisAddress }: SiteDetailPan
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b text-sm shrink-0">
+      <div className="flex border-b shrink-0">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-4 px-1 font-bold transition-colors text-center leading-tight text-xs ${
+            className={`flex-1 py-3 px-1 transition-colors text-center flex flex-col items-center gap-0.5 ${
               activeTab === tab.id
-                ? 'text-green-700 border-b-2 border-green-600'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'text-green-700 border-b-2 border-green-600 bg-green-50'
+                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
             }`}
           >
-            {tab.label}
+            <span className="text-base leading-none">{tab.icon}</span>
+            <span className="text-[10px] font-medium leading-tight mt-0.5">{tab.top}</span>
+            <span className="text-sm font-bold leading-tight">{tab.bottom}</span>
           </button>
         ))}
       </div>
