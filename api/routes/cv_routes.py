@@ -262,24 +262,14 @@ async def _run_analysis_job(job_id: str, request: AnalysisRequest):
             session.add_all(site_records)
             await session.commit()
 
-        trees = [
-            {
-                "lat": t["lat"], "lon": t["lon"],
-                "confidence": t["confidence"],
-                "bbox_width": t.get("bbox_width", 0),
-                "bbox_height": t.get("bbox_height", 0),
-            }
-            for t in result.get("existing_trees", [])
-        ]
-
         final = {
             "analysis_id": analysis_id,
             "address": result["address"],
             "latitude": center_lat,
             "longitude": center_lon,
             "planting_sites": site_responses,
-            "existing_trees": trees,
-            "existing_trees_count": result.get("existing_trees_count", len(trees)),
+            "existing_trees": [],
+            "existing_trees_count": 0,
             "imagery_saved": request.save_images,
             "timestamp": datetime.utcnow().isoformat(),
         }

@@ -104,10 +104,6 @@ export default function StreetLayer({ map }: StreetLayerProps) {
     const SITES_LAYER_ID = 'planting-sites-circles'
     const LABELS_LAYER_ID = 'planting-sites-labels'
 
-    // Existing trees layer IDs
-    const TREES_SOURCE_ID = 'existing-trees'
-    const TREES_LAYER_ID = 'existing-trees-circles'
-
     // Create GeoJSON for planting sites (recommended - blue dots)
     const createSitesGeoJSON = (): GeoJSON.FeatureCollection => {
       if (!currentAnalysis?.planting_sites) {
@@ -134,30 +130,6 @@ export default function StreetLayer({ map }: StreetLayerProps) {
             area_sq_ft: site.area_sq_ft,
             has_nearby_roads: site.has_nearby_roads,
             has_nearby_buildings: site.has_nearby_buildings,
-          },
-        })),
-      }
-    }
-
-    // Create GeoJSON for existing trees (green dots)
-    const createTreesGeoJSON = (): GeoJSON.FeatureCollection => {
-      if (!currentAnalysis?.existing_trees) {
-        return { type: 'FeatureCollection', features: [] }
-      }
-
-      return {
-        type: 'FeatureCollection',
-        features: currentAnalysis.existing_trees.map((tree, index) => ({
-          type: 'Feature' as const,
-          id: `tree-${index}`,
-          geometry: {
-            type: 'Point' as const,
-            coordinates: [tree.lon, tree.lat],
-          },
-          properties: {
-            confidence: tree.confidence,
-            bbox_width: tree.bbox_width,
-            bbox_height: tree.bbox_height,
           },
         })),
       }
@@ -215,79 +187,7 @@ export default function StreetLayer({ map }: StreetLayerProps) {
       })
     }
 
-    // Add or update existing trees source
-    if (map.getSource(TREES_SOURCE_ID)) {
-      (map.getSource(TREES_SOURCE_ID) as mapboxgl.GeoJSONSource).setData(createTreesGeoJSON())
-    } else {
-      map.addSource(TREES_SOURCE_ID, {
-        type: 'geojson',
-        data: createTreesGeoJSON(),
-      })
-
-      // Add existing trees circles layer (green dots)
-      map.addLayer({
-        id: TREES_LAYER_ID,
-        type: 'circle',
-        source: TREES_SOURCE_ID,
-        paint: {
-          'circle-radius': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            15, 6,
-            18, 10,
-            20, 14,
-          ],
-          'circle-color': SITE_COLORS.existing,
-          'circle-stroke-width': 1,
-          'circle-stroke-color': '#ffffff',
-          'circle-opacity': 0.8,
-        },
-      })
-    }
-
-    // Define event handlers (these need to be registered fresh each time)
-    const handleTreesMouseEnter = (e: mapboxgl.MapLayerMouseEvent) => {
-      map.getCanvas().style.cursor = 'pointer'
-
-      if (e.features && e.features[0]) {
-        const props = e.features[0].properties
-        const coordinates = (e.features[0].geometry as GeoJSON.Point).coordinates.slice() as [number, number]
-
-        if (hoverPopup.current) {
-          hoverPopup.current.remove()
-        }
-
-        const confidence = props?.confidence ? (props.confidence * 100).toFixed(0) : 'N/A'
-        hoverPopup.current = new mapboxgl.Popup({
-          closeButton: false,
-          closeOnClick: false,
-          offset: 10,
-        })
-          .setLngLat(coordinates)
-          .setHTML(`
-            <div style="padding: 8px; min-width: 120px;">
-              <div style="font-weight: 600; font-size: 13px; color: #22c55e; margin-bottom: 4px;">
-                🌳 Existing Tree
-              </div>
-              <div style="font-size: 12px; color: #6b7280;">
-                Confidence: ${confidence}%
-              </div>
-            </div>
-          `)
-          .addTo(map)
-      }
-    }
-
-    const handleTreesMouseLeave = () => {
-      map.getCanvas().style.cursor = ''
-      if (hoverPopup.current) {
-        hoverPopup.current.remove()
-        hoverPopup.current = null
-      }
-    }
-
-    // Click handler - show popup with "Ask SmartCanopy AI" button
+    // Click handler
     const handleSitesClick = (e: mapboxgl.MapLayerMouseEvent) => {
       if (e.features && e.features[0]) {
         const props = e.features[0].properties
@@ -379,15 +279,12 @@ export default function StreetLayer({ map }: StreetLayerProps) {
     }
 
     // Register event handlers
-    map.on('mouseenter', TREES_LAYER_ID, handleTreesMouseEnter)
-    map.on('mouseleave', TREES_LAYER_ID, handleTreesMouseLeave)
     map.on('click', SITES_LAYER_ID, handleSitesClick)
     map.on('mouseenter', SITES_LAYER_ID, handleSitesMouseEnter)
     map.on('mouseleave', SITES_LAYER_ID, handleSitesMouseLeave)
 
     // Update visibility based on tier and data availability
     const hasSitesData = currentAnalysis?.planting_sites && currentAnalysis.planting_sites.length > 0
-    const hasTreesData = currentAnalysis?.existing_trees && currentAnalysis.existing_trees.length > 0
     const isStreetTier = currentTier === 'street'
 
     // Planting sites visibility (blue dots)
@@ -398,15 +295,8 @@ export default function StreetLayer({ map }: StreetLayerProps) {
       map.setLayoutProperty(LABELS_LAYER_ID, 'visibility', isStreetTier && hasSitesData ? 'visible' : 'none')
     }
 
-    // Existing trees visibility (green dots)
-    if (map.getLayer(TREES_LAYER_ID)) {
-      map.setLayoutProperty(TREES_LAYER_ID, 'visibility', isStreetTier && hasTreesData ? 'visible' : 'none')
-    }
-
     return () => {
       // Remove event handlers
-      map.off('mouseenter', TREES_LAYER_ID, handleTreesMouseEnter)
-      map.off('mouseleave', TREES_LAYER_ID, handleTreesMouseLeave)
       map.off('click', SITES_LAYER_ID, handleSitesClick)
       map.off('mouseenter', SITES_LAYER_ID, handleSitesMouseEnter)
       map.off('mouseleave', SITES_LAYER_ID, handleSitesMouseLeave)

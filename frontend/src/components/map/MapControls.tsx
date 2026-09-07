@@ -243,10 +243,6 @@ export default function MapControls() {
                 <span className="text-gray-500">Planting Sites</span>
                 <span className="font-medium text-canopy-600">{currentAnalysis.planting_sites.length}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Existing Trees</span>
-                <span className="font-medium text-gray-700">{currentAnalysis.existing_trees_count}</span>
-              </div>
             </div>
             <p className="text-xs text-gray-400 mt-2 pt-2 border-t truncate">{currentAnalysis.address}</p>
           </div>

@@ -4,13 +4,11 @@ Combines DeepForest, NDVI, and slope to identify optimal tree planting locations
 """
 
 import math
-from test_deepforest import DeepForestDetector
 from download_imagery import ImageryDownloader
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 from osm_filter import OSMFilter
-from concurrent.futures import ThreadPoolExecutor
 
 
 def pixel_to_latlon(px: float, py: float, center_lat: float, center_lon: float,
@@ -49,7 +47,6 @@ class PlantingSiteDetector:
     """Identifies optimal tree planting locations"""
     
     def __init__(self):
-        self.tree_detector = DeepForestDetector()
         self.image_downloader = ImageryDownloader()
         self.osm_filter = OSMFilter()
     
@@ -81,31 +78,25 @@ class PlantingSiteDetector:
             print("✗ Failed to download imagery")
             return None
         
-        # Steps 2–4 and 6: run DeepForest + OSM in parallel; load NDVI/slope on main thread
-        print("\nStep 2/7: Detecting trees and fetching OSM data (parallel)...")
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            tree_future = executor.submit(self.tree_detector.predict_trees, result['rgb_path'])
-            osm_future = executor.submit(
-                self.osm_filter.get_infrastructure_data,
-                result['coordinates'][0], result['coordinates'][1], buffer_m
-            )
+        # Step 2: Fetch OSM infrastructure data
+        print("\nStep 2/5: Fetching OSM infrastructure data...")
+        osm_data = self.osm_filter.get_infrastructure_data(
+            result['coordinates'][0], result['coordinates'][1], buffer_m
+        )
 
-            # Load NDVI and slope images while both background tasks run
-            print("\nStep 3/7: Analyzing vegetation coverage...")
-            ndvi_img = np.array(Image.open(result['ndvi_path']).convert('L'))
-            ndvi_normalized = ndvi_img / 255.0
+        # Step 3: Load NDVI and slope arrays
+        print("\nStep 3/5: Analyzing vegetation coverage...")
+        ndvi_img = np.array(Image.open(result['ndvi_path']).convert('L'))
+        ndvi_normalized = ndvi_img / 255.0
 
-            print("\nStep 4/7: Analyzing terrain...")
-            slope_img = np.array(Image.open(result['slope_path']).convert('L'))
-            slope_normalized = slope_img / 255.0 * 30
+        print("\nStep 4/5: Analyzing terrain...")
+        slope_img = np.array(Image.open(result['slope_path']).convert('L'))
+        slope_normalized = slope_img / 255.0 * 30
 
-            tree_predictions = tree_future.result()
-            osm_data = osm_future.result()
-
-        # Step 5: Identify planting sites
-        print("\nStep 5/7: Identifying planting opportunities...")
+        # Step 5: Identify planting sites (NDVI filter already excludes existing canopy)
+        print("\nStep 5/5: Identifying planting opportunities...")
         planting_sites = self.find_planting_sites(
-            tree_predictions,
+            None,
             ndvi_normalized,
             slope_normalized,
             result['rgb_path']
@@ -130,7 +121,7 @@ class PlantingSiteDetector:
         )
         
         # Generate report
-        self.generate_report(address, tree_predictions, filtered_sites)
+        self.generate_report(address, None, filtered_sites)
 
         # Get image dimensions from the NDVI image — planting site pixel
         # centroids are computed in NDVI array space, so use NDVI dimensions
@@ -139,28 +130,6 @@ class PlantingSiteDetector:
         img_width, img_height = img.size
         center_lat = result['coordinates'][0]
         center_lon = result['coordinates'][1]
-
-        # Extract existing tree locations with lat/lon
-        existing_trees = []
-        if tree_predictions is not None and len(tree_predictions) > 0:
-            for _, tree in tree_predictions.iterrows():
-                # Calculate center of bounding box
-                center_x = (tree['xmin'] + tree['xmax']) / 2
-                center_y = (tree['ymin'] + tree['ymax']) / 2
-
-                lat, lon = pixel_to_latlon(
-                    center_x, center_y,
-                    center_lat, center_lon,
-                    buffer_m, img_width, img_height
-                )
-
-                existing_trees.append({
-                    'lat': lat,
-                    'lon': lon,
-                    'confidence': float(tree['score']),
-                    'bbox_width': int(tree['xmax'] - tree['xmin']),
-                    'bbox_height': int(tree['ymax'] - tree['ymin'])
-                })
 
         # Convert planting site pixel coords to lat/lon
         for site in filtered_sites:
@@ -175,9 +144,9 @@ class PlantingSiteDetector:
 
         return {
             'address': address,
-            'existing_trees': existing_trees,  # List with lat/lon instead of just count
-            'existing_trees_count': len(existing_trees),  # Keep count for backward compat
-            'planting_sites': filtered_sites,  # Now includes location_lat/lon
+            'existing_trees': [],
+            'existing_trees_count': 0,
+            'planting_sites': filtered_sites,
             'imagery': result,
             'osm_data': osm_data,
             'exclusion_mask': exclusion_mask
