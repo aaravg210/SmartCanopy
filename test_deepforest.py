@@ -38,7 +38,7 @@ class DeepForestDetector:
         print(f"Detecting trees in: {image_path}\n")
         
         # Predict trees
-        predictions = self.model.predict_image(path=image_path, return_plot=False)
+        predictions = self.model.predict_image(path=image_path)
         # Filter by confidence threshold
         if len(predictions) > 0:
             predictions = predictions[predictions['score'] >= confidence_threshold]
