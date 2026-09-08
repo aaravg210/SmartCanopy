@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import type { PlantingSiteResponse, SpeciesData } from '@/types'
 import { getPriorityNumber, getPriorityLevel } from '@/types'
 import { fetchSpecies } from '@/lib/api/cv'
+import { useAnalysisStore } from '@/stores/analysisStore'
 
 const OCF_FREE_TREES_URL = 'https://www.ourcityforest.org/free-trees'
 const OCF_GRANT_ZONE_URL = 'https://www.ourcityforest.org'
@@ -26,7 +27,9 @@ export default function SiteDetailPanel({ site, analysisAddress }: SiteDetailPan
   const [projectionYears, setProjectionYears] = useState(10)
   const [diyOpen, setDiyOpen] = useState(false)
 
-  const priority = getPriorityNumber(site.suitability_score)
+  const { currentAnalysis } = useAnalysisStore()
+  const allScores = (currentAnalysis?.planting_sites ?? []).map((s) => s.suitability_score)
+  const priority = getPriorityNumber(site.suitability_score, allScores)
   const priorityLevel = getPriorityLevel(site.suitability_score)
 
   const priorityColors = {

@@ -9,6 +9,7 @@ import { getPriorityNumber } from '@/types'
 
 interface SitePopupProps {
   siteId: string
+  priority: number
   suitabilityScore: number
   ndviCategory: string
   slopeCategory: string
@@ -17,7 +18,7 @@ interface SitePopupProps {
 }
 
 function createSitePopupHTML(props: SitePopupProps): string {
-  const priority = getPriorityNumber(props.suitabilityScore)
+  const priority = props.priority
   const priorityColor = priority >= 7 ? '#22c55e' : priority >= 4 ? '#f59e0b' : '#6b7280'
 
   return `
@@ -110,6 +111,9 @@ export default function StreetLayer({ map }: StreetLayerProps) {
         return { type: 'FeatureCollection', features: [] }
       }
 
+      // Compute relative priority: best site gets highest number (1-10 scale)
+      const allScores = currentAnalysis.planting_sites.map((s) => s.suitability_score)
+
       return {
         type: 'FeatureCollection',
         features: currentAnalysis.planting_sites.map((site) => ({
@@ -122,7 +126,7 @@ export default function StreetLayer({ map }: StreetLayerProps) {
           properties: {
             site_id: site.site_id,
             suitability_score: site.suitability_score,
-            priority: getPriorityNumber(site.suitability_score),
+            priority: getPriorityNumber(site.suitability_score, allScores),
             avg_ndvi: site.avg_ndvi,
             ndvi_category: site.ndvi_category,
             avg_slope: site.avg_slope,
@@ -222,6 +226,7 @@ export default function StreetLayer({ map }: StreetLayerProps) {
             .setHTML(
               createSitePopupHTML({
                 siteId: props?.site_id || '',
+                priority: props?.priority || 7,
                 suitabilityScore: props?.suitability_score || 0,
                 ndviCategory: props?.ndvi_category || '',
                 slopeCategory: props?.slope_category || '',
@@ -259,6 +264,7 @@ export default function StreetLayer({ map }: StreetLayerProps) {
           .setHTML(
             createSitePopupHTML({
               siteId: props?.site_id || '',
+              priority: props?.priority || 7,
               suitabilityScore: props?.suitability_score || 0,
               ndviCategory: props?.ndvi_category || '',
               slopeCategory: props?.slope_category || '',

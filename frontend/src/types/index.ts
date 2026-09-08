@@ -187,7 +187,11 @@ export function getPriorityLevel(suitabilityScore: number): 'high' | 'medium' | 
   return 'low'
 }
 
-export function getPriorityNumber(suitabilityScore: number): number {
-  // Convert 0-1 score to 1-10 priority
-  return Math.round(suitabilityScore * 10)
+export function getPriorityNumber(score: number, allScores: number[]): number {
+  // Relative ranking within the result set: best site = 10, worst = 1
+  if (allScores.length <= 1) return 7
+  const min = Math.min(...allScores)
+  const max = Math.max(...allScores)
+  if (max === min) return 7
+  return Math.max(1, Math.round(1 + ((score - min) / (max - min)) * 9))
 }

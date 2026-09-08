@@ -93,14 +93,23 @@ class PlantingSiteDetector:
         slope_img = np.array(Image.open(result['slope_path']).convert('L'))
         slope_normalized = slope_img / 255.0 * 30
 
-        # Step 5: Identify planting sites (NDVI filter already excludes existing canopy)
+        # Step 5: Identify planting sites using adaptive NDVI upper bound.
+        # Start tight (0.45) to exclude sparse existing canopy; relax if no sites found.
         print("\nStep 5/5: Identifying planting opportunities...")
-        planting_sites = self.find_planting_sites(
-            None,
-            ndvi_normalized,
-            slope_normalized,
-            result['rgb_path']
-        )
+        NDVI_UPPER_START = 0.45
+        NDVI_UPPER_MAX   = 0.60
+        NDVI_UPPER_STEP  = 0.05
+        ndvi_upper = NDVI_UPPER_START
+        planting_sites = []
+        while ndvi_upper <= NDVI_UPPER_MAX:
+            planting_sites = self.find_planting_sites(
+                None, ndvi_normalized, slope_normalized, result['rgb_path'],
+                ndvi_upper=ndvi_upper
+            )
+            if planting_sites:
+                break
+            print(f"⚠ No sites at NDVI upper={ndvi_upper:.2f}, relaxing to {ndvi_upper + NDVI_UPPER_STEP:.2f}")
+            ndvi_upper += NDVI_UPPER_STEP
     
         # Step 7: Create exclusion mask
         print("\nStep 7/7: Applying infrastructure filters...")
@@ -159,13 +168,10 @@ class PlantingSiteDetector:
 
 
     
-    def find_planting_sites(self, tree_predictions, ndvi, slope, rgb_path):
+    def find_planting_sites(self, tree_predictions, ndvi, slope, rgb_path=None,
+                            ndvi_upper: float = 0.45):
         """Identify suitable locations with texture analysis"""
-        
-        # Load RGB for texture analysis
-        rgb_img = np.array(Image.open(rgb_path))
-        gray = np.mean(rgb_img, axis=2)
-                
+
         # Create tree mask
         tree_mask = np.zeros(ndvi.shape, dtype=bool)
         height, width = ndvi.shape
@@ -176,22 +182,22 @@ class PlantingSiteDetector:
                 xmax = min(width, int(tree['xmax']))
                 ymax = min(height, int(tree['ymax']))
                 tree_mask[ymin:ymax, xmin:xmax] = True
-        
+
         # Resize slope if needed
         if slope.shape != ndvi.shape:
             from PIL import Image as PILImage
             slope_img = PILImage.fromarray((slope * 255).astype(np.uint8))
             slope_img = slope_img.resize((ndvi.shape[1], ndvi.shape[0]), PILImage.BILINEAR)
             slope = np.array(slope_img) / 255.0 * 30
-                
+
         # Impervious surface mask: NDVI < -0.05 reliably identifies pavement,
         # concrete, and rooftops in NAIP 4-band imagery. This catches infrastructure
         # that OSM may not have mapped yet.
         impervious_mask = ndvi < -0.05
 
         suitable = (
-            (ndvi > 0.20) &           # Above bare-soil/road-edge threshold (NDVI-first: asphalt ~0.0, gravel/dirt ~0.05-0.19)
-            (ndvi < 0.55) &           # Not already dense canopy (target sparse/open vegetation for planting)
+            (ndvi > 0.20) &           # Above bare-soil/road-edge threshold (asphalt ~0.0, gravel/dirt ~0.05-0.19)
+            (ndvi < ndvi_upper) &     # Not already existing canopy (adaptive: starts at 0.45, relaxes if needed)
             (slope < 15) &            # Flat enough to plant
             (~tree_mask) &            # No existing tree detected here
             (~impervious_mask)        # Not a road or rooftop

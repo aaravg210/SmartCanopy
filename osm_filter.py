@@ -16,6 +16,7 @@ from rasterio import features
 BUFFER_ROAD_M = 2        # minimal — NDVI excludes asphalt; OSM is a safety net for centerlines
 BUFFER_BUILDING_M = 3   # green rooftops can have NDVI 0.2-0.5 and fool the NDVI filter
 BUFFER_PARKING_M = 2    # asphalt mostly excluded by NDVI already
+BUFFER_LEISURE_M = 1    # hard-surface leisure features (tennis courts, pools, pitches)
 
 # A site is rejected if ANY excluded pixel falls within this radius of its centre (pixels).
 # Set to 0 to reject only when the exact centre pixel is excluded.
@@ -95,8 +96,16 @@ class OSMFilter:
             "parking", lat, lon, buffer_m, bbox_geom,
             self._parking_cache, {"amenity": "parking"}
         )
+        # Hard-surface leisure features — tennis courts, pools, sports pitches, etc.
+        # Parks/gardens are intentionally excluded from this fetch (they are valid planting areas).
+        leisure = self._fetch_layer(
+            "leisure", lat, lon, buffer_m, bbox_geom,
+            None,  # no pre-downloaded cache; always live
+            {"leisure": ["tennis_court", "swimming_pool", "pitch", "sports_centre",
+                         "track", "ice_rink", "golf_course"]}
+        )
 
-        return {"roads": roads, "buildings": buildings, "parking": parking}
+        return {"roads": roads, "buildings": buildings, "parking": parking, "leisure": leisure}
 
     def _fetch_layer(self, name: str, lat: float, lon: float, buffer_m: int,
                      bbox_geom, cache: gpd.GeoDataFrame, tags: dict) -> gpd.GeoDataFrame:
@@ -151,6 +160,7 @@ class OSMFilter:
             "roads": BUFFER_ROAD_M,
             "buildings": BUFFER_BUILDING_M,
             "parking": BUFFER_PARKING_M,
+            "leisure": BUFFER_LEISURE_M,
         }
 
         for name, gdf in osm_data.items():
