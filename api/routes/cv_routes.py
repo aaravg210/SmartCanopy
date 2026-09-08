@@ -43,7 +43,7 @@ class AnalysisRequest(BaseModel):
     address: str = Field(..., min_length=3, description="Street address to analyze")
     latitude: Optional[float] = Field(None, description="Pre-geocoded latitude from Mapbox. Skips Nominatim when provided.")
     longitude: Optional[float] = Field(None, description="Pre-geocoded longitude from Mapbox. Skips Nominatim when provided.")
-    buffer_m: int = Field(50, ge=30, le=500, description="Analysis radius in meters")
+    buffer_m: int = Field(30, ge=20, le=500, description="Analysis radius in meters")
     save_images: bool = Field(True)
 
 

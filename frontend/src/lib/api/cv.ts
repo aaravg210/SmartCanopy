@@ -55,7 +55,7 @@ export async function submitAnalysis(request: AnalysisRequest): Promise<JobSubmi
       address: request.address,
       latitude: request.latitude,
       longitude: request.longitude,
-      buffer_m: request.buffer_m ?? 50,
+      buffer_m: request.buffer_m ?? 30,
       save_images: request.save_images !== false,
     }),
   })
@@ -80,7 +80,7 @@ export async function analyzeAddressWithPolling(
     onProgress?: (message: string) => void
   } = {}
 ): Promise<AnalysisResponse> {
-  const { intervalMs = 3000, timeoutMs = 180_000, onProgress } = options
+  const { intervalMs = 3000, timeoutMs = 240_000, onProgress } = options
 
   // Geocode first for accuracy
   const coords = await geocodeAddress(request.address)
@@ -115,7 +115,7 @@ export async function analyzeAddressWithPolling(
     }
   }
 
-  throw new Error('Analysis timed out after 3 minutes — please try again')
+  throw new Error('Analysis timed out after 4 minutes — please try again')
 }
 
 /**

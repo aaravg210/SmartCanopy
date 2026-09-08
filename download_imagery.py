@@ -73,20 +73,9 @@ class ImageryDownloader:
         ndvi_path = os.path.join(output_dir, f"{clean_address}_ndvi.png")
         ndvi_img = self.download_image_from_url(result['urls']['ndvi'], ndvi_path)
         
-        # Get slope URL and download
-        terrain = result['imagery']['terrain']
-        region = result['region']
-        
-        slope_url = self.pipeline.get_image_url(
-            terrain,
-            region,
-            bands=['slope'],
-            min_val=0,
-            max_val=30
-        )
-        
+        # Slope URL was generated in parallel with RGB+NDVI in data_pipeline.py
         slope_path = os.path.join(output_dir, f"{clean_address}_slope.png")
-        slope_img = self.download_image_from_url(slope_url, slope_path)
+        slope_img = self.download_image_from_url(result['urls']['slope'], slope_path)
         print(f"\n✓ All images downloaded to address  {clean_address}/")
         print(f"\n✓ All images downloaded to {output_dir}/")
         

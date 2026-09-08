@@ -231,21 +231,25 @@ class TreeDataPipeline:
         point = ee.Geometry.Point([lon, lat])
         region = point.buffer(buffer_m).bounds()
         
-        # Step 6: Generate visualization URLs (both GEE requests in parallel)
+        # Step 6: Generate visualization URLs (all three GEE requests in parallel)
         print("\nGenerating visualization URLs...")
 
-        with ThreadPoolExecutor(max_workers=2) as executor:
+        with ThreadPoolExecutor(max_workers=3) as executor:
             rgb_future = executor.submit(
                 self.get_image_url, naip_with_ndvi, region, ['R', 'G', 'B'], 0, 255
             )
             ndvi_future = executor.submit(
                 self.get_image_url, naip_with_ndvi, region, ['NDVI'], -1, 1
             )
+            slope_future = executor.submit(
+                self.get_image_url, terrain, region, ['slope'], 0, 30
+            )
             rgb_url = rgb_future.result()
             ndvi_url = ndvi_future.result()
+            slope_url = slope_future.result()
 
         print("✓ Visualization URLs generated")
-        
+
         # Step 7: Package everything
         result = {
             'address': address,
@@ -258,6 +262,7 @@ class TreeDataPipeline:
             'urls': {
                 'rgb': rgb_url,
                 'ndvi': ndvi_url,
+                'slope': slope_url,
             },
             'region': region
         }

@@ -13,13 +13,13 @@ import rasterio
 from rasterio import features
 
 # Clearance distances (meters) — planted trees must not be closer than these
-BUFFER_ROAD_M = 3       # roads
-BUFFER_BUILDING_M = 2   # buildings
-BUFFER_PARKING_M = 2    # parking lots
+BUFFER_ROAD_M = 2        # minimal — NDVI excludes asphalt; OSM is a safety net for centerlines
+BUFFER_BUILDING_M = 3   # green rooftops can have NDVI 0.2-0.5 and fool the NDVI filter
+BUFFER_PARKING_M = 2    # asphalt mostly excluded by NDVI already
 
 # A site is rejected if ANY excluded pixel falls within this radius of its centre (pixels).
 # Set to 0 to reject only when the exact centre pixel is excluded.
-SITE_REJECTION_RADIUS_PX = 3
+SITE_REJECTION_RADIUS_PX = 5
 
 # Path to pre-downloaded Bay Area OSM GeoPackage files.
 # Set environment variable OSM_CACHE_DIR to override, or keep as default.

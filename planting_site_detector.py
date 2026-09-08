@@ -190,8 +190,8 @@ class PlantingSiteDetector:
         impervious_mask = ndvi < -0.05
 
         suitable = (
-            (ndvi > 0.15) &           # Above bare-soil threshold
-            (ndvi < 0.65) &           # Not already dense canopy
+            (ndvi > 0.20) &           # Above bare-soil/road-edge threshold (NDVI-first: asphalt ~0.0, gravel/dirt ~0.05-0.19)
+            (ndvi < 0.55) &           # Not already dense canopy (target sparse/open vegetation for planting)
             (slope < 15) &            # Flat enough to plant
             (~tree_mask) &            # No existing tree detected here
             (~impervious_mask)        # Not a road or rooftop
