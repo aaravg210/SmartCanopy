@@ -129,20 +129,20 @@ export default function SiteDetailPanel({ site, analysisAddress }: SiteDetailPan
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b shrink-0">
+      <div className="flex border border-green-300 shrink-0 rounded-none">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-3 px-1 transition-colors text-center flex flex-col items-center gap-0.5 ${
+            className={`flex-1 py-4 px-2 transition-colors text-center flex flex-col items-center gap-1 ${
               activeTab === tab.id
-                ? 'text-green-700 border-b-2 border-green-600 bg-green-50'
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                ? 'text-green-700 border-b-4 border-green-600 bg-green-50'
+                : 'text-gray-900 hover:bg-gray-50 border-b-4 border-transparent'
             }`}
           >
-            <span className="text-base leading-none">{tab.icon}</span>
-            <span className="text-[10px] font-medium leading-tight mt-0.5">{tab.top}</span>
-            <span className="text-sm font-bold leading-tight">{tab.bottom}</span>
+            <span className="text-xl leading-none">{tab.icon}</span>
+            <span className="text-xs font-medium leading-tight text-gray-700">{tab.top}</span>
+            <span className="text-base font-bold leading-tight">{tab.bottom}</span>
           </button>
         ))}
       </div>
